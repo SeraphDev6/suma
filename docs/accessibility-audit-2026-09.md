@@ -1147,3 +1147,35 @@ Verified by re-running the same axe-core crawl (47 member-app and 58 admin-app p
 - Onboarding carousel indicators stay hidden by `onboarding.scss`; prev and next buttons are present and auto-advance is off.
 - Not runtime-tested with assistive technology: press-and-hold with a screen reader or switch, the map with VoiceOver or TalkBack, and checkout and add-funds forms with a linked payment method.
 - AA and AAA items (colour palette, focus ring contrast, sticky header scroll padding, target size, reduced motion, confirmations, content reading level) are unchanged.
+
+# Level AA remediation status (branch `a11y-level-aa`, 2026-09-25, member app only)
+
+Branched from `a11y-level-a` after the admin-app changes were dropped. Verified with the same axe-core crawl (47 member-app page loads), a Sass compile of the theme with a contrast script over 39 foreground/background pairs, and scripted probes.
+
+| Check | Level A branch | AA branch |
+|---|---|---|
+| axe `color-contrast` (1.4.3) nodes | 202 on 44 pages | 0 |
+| axe nodes tagged A or AA (all rules) | 203 | 1 (the `autocomplete-valid` hit on the card security code, a token axe rejects; the token is correct) |
+| Theme pairs measured at or above 4.5:1 text / 3:1 non-text | 24 of 59 text pairs | 39 of 39 |
+| Keyboard focus ring on tab bar, links, buttons, inputs, map controls (live) | invisible on tab bar and hamburger | 2px `#725328` outline with white halo; hamburger 3px dark outline on gold |
+| Focused element under the sticky header after Shift+Tab (live, 12 steps) | 3 | 0 (`scroll-padding-top: 130px`) |
+| Horizontal scroll at 320px on code entry, add card, link bank, offering, dashboard, utilities (live) | code entry not tested | none; code boxes fit on one row at 38px each |
+| Map pan control (live) | none | four 44×44 buttons, keyboard focusable, pan the map |
+
+## Fixed
+
+- 1.4.3, 1.4.11: brand gold stays as a fill with dark text; text, links, outline buttons, checked controls, placeholders, input borders and the focus ring use a text-safe gold (`#725328`, 7.04:1); secondary `#575956`, success `#35614b`, danger `#9e3500`; `$min-contrast-ratio` raised to 4.5 so Bootstrap never picks white on gold; navbar switched to the light variant (black on gold, 9.29:1); tab bar text `#604522`; links underlined again; numpad borders and cluster badge at 3:1.
+- 2.4.7, 2.4.11: one global focus rule, dark hamburger ring, `scroll-padding-top`, error toast moved to the bottom of the viewport.
+- 1.3.4: portrait lock removed from the manifest and meta tag. 1.3.5: `name` and `address-level1` tokens added.
+- 1.4.10, 1.4.12: code-entry row wraps and scales, card preview capped at 100%, add-to-cart label wraps, `lh-1` removed from text, press-and-hold grows instead of clipping.
+- 2.5.7, 2.5.8: map pan control; zoom and locate controls 44px; gear, pencil and copy buttons at least 24px.
+- 3.3.4: confirmation dialogs before adding funds, paying a balance, ending a trip and starting a paid trip.
+- 3.1.2: the two untranslated Spanish seed strings translated. 3.3.1/3.3.3: backend per-field validation messages are now shown under the localized message (marked `lang="en"`).
+- Pre-existing missing key `mobility.reserve_scooter` added in both languages.
+
+## Still open at AA
+
+- 1.4.10 and 1.4.12 were verified at 320px on six pages plus the code-entry screen; the map drawer and checkout with a payment method were not reachable in the fixture environment.
+- 3.3.1/3.3.3: backend messages are still English until the API returns localized per-field codes.
+- The mobility map's vehicle markers and clusters could not be exercised live (no vehicles in the fixtures); their names and contrast were set in code.
+- AAA items (7:1 text on the light-grey surfaces, target size 44px everywhere, reduced motion, content reading level) are out of scope for this branch.
