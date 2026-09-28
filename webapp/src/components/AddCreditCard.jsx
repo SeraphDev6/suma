@@ -175,6 +175,7 @@ export default function AddCreditCard({ onSuccess, error, setError }) {
             autoCorrect="off"
             spellCheck="false"
             label={t("forms.name")}
+            text={t("forms.card_name_help")}
             value={name}
             errors={errors}
             register={register}
@@ -199,6 +200,7 @@ export default function AddCreditCard({ onSuccess, error, setError }) {
             autoCorrect="off"
             spellCheck="false"
             label={t("forms.card_number")}
+            text={t("forms.card_number_help")}
             value={Payment.formatCardNumber(cardInfo, { editing: true })}
             errors={errors}
             registerOptions={{
@@ -228,6 +230,7 @@ export default function AddCreditCard({ onSuccess, error, setError }) {
             autoCorrect="off"
             spellCheck="false"
             label={t("forms.card_expiry")}
+            text={t("forms.card_expiry_help")}
             value={Payment.formatCardExpiry(cardInfo, { editing: true })}
             errors={errors}
             register={register}
@@ -261,6 +264,7 @@ export default function AddCreditCard({ onSuccess, error, setError }) {
             autoCorrect="off"
             spellCheck="false"
             label={t("forms.card_cvc")}
+            text={t("forms.card_cvc_help")}
             value={Payment.formatCardCvc(cardInfo, { editing: true })}
             errors={errors}
             register={register}

@@ -20,6 +20,7 @@ import Button from "react-bootstrap/Button";
 export default function Map() {
   const { appNav, topNav } = useGlobalViewState();
   const mapRef = React.useRef();
+  const drawerRef = React.useRef(null);
   const { user, handleUpdateCurrentMember } = useUser();
   const [loadedMap, setLoadedMap] = React.useState(null);
   const [selectedMapVehicle, setSelectedMapVehicle] = React.useState(null);
@@ -30,6 +31,9 @@ export default function Map() {
   const [reserveError, setReserveError] = useError();
   const [locationPermissionsError, setLocationPermissionsError] = useError("");
   const [error, setError] = useError();
+  // True when focus should move into the drawer once its content has loaded.
+  const [drawerFocusPending, setDrawerFocusPending] = React.useState(false);
+  const [refreshStatus, setRefreshStatus] = React.useState("");
 
   const handleVehicleClick = React.useCallback(
     (mapVehicle) => {
@@ -38,6 +42,7 @@ export default function Map() {
       setSelectedMapVehicle(mapVehicle);
       setLoadedVehicle(null);
       setSelectedVehicleRemoved(false);
+      setDrawerFocusPending(Boolean(mapVehicle));
       if (!mapVehicle) {
         return;
       }
@@ -56,6 +61,7 @@ export default function Map() {
         .catch((e) => {
           setSelectedMapVehicle(null);
           setLoadedVehicle(null);
+          setDrawerFocusPending(false);
           setError(extractErrorCode(e));
         });
     },
@@ -64,15 +70,25 @@ export default function Map() {
 
   // When the selected vehicle disappears during a refresh, keep the drawer open
   // and tell the user, rather than closing it out from under them (WCAG 2.2.2).
-  const handleVehicleRemove = React.useCallback(
-    () => setSelectedVehicleRemoved(true),
-    []
-  );
-  const handleDismissRemovedVehicle = React.useCallback(() => {
+  const handleVehicleRemove = React.useCallback(() => {
+    setSelectedVehicleRemoved(true);
+    // The drawer content is replaced. If focus is in there, keep it in the drawer,
+    // but do not pull focus away from the map if the user is working there.
+    if (drawerRef.current?.contains(document.activeElement)) {
+      setDrawerFocusPending(true);
+    }
+  }, []);
+  // Close the drawer from within it, and put focus back on the marker or map,
+  // since the focused drawer content is removed.
+  const handleCloseDrawer = React.useCallback(() => {
     setSelectedMapVehicle(null);
     setLoadedVehicle(null);
     setSelectedVehicleRemoved(false);
-  }, []);
+    setDrawerFocusPending(false);
+    setError(null);
+    setReserveError(null);
+    loadedMap?.releaseSelectedVehicle();
+  }, [loadedMap, setError, setReserveError]);
   const handleLocationFound = React.useCallback(
     (lastLocation) => setLastMarkerLocation(lastLocation),
     []
@@ -132,6 +148,8 @@ export default function Map() {
         .tap(handleUpdateCurrentMember)
         .then((r) => {
           setOngoingTrip(r.data);
+          // The button that had focus is replaced by the trip.
+          setDrawerFocusPending(true);
           loadedMap.beginTrip();
         })
         .catch((e) => setReserveError(extractErrorCode(e)));
@@ -140,6 +158,8 @@ export default function Map() {
   );
 
   const handleEndTrip = React.useCallback(() => {
+    // The button that had focus is replaced by the trip summary.
+    setDrawerFocusPending(true);
     loadedMap
       ?.setVehicleEventHandlers({
         onClick: handleVehicleClick,
@@ -151,7 +171,30 @@ export default function Map() {
   const handleCloseTrip = React.useCallback(() => {
     setSelectedMapVehicle(null);
     setOngoingTrip(null);
-  }, []);
+    setDrawerFocusPending(false);
+    loadedMap?.releaseSelectedVehicle();
+  }, [loadedMap]);
+
+  // Pointer users close the vehicle drawer by clicking the map.
+  // Let keyboard users close it with Escape (WCAG 2.1.3).
+  const handleDrawerKeyDown = (e) => {
+    if (e.key !== "Escape" || !selectedMapVehicle || ongoingTrip) {
+      return;
+    }
+    // React events bubble out of portals, so ignore Escape from the confirmation modal.
+    if (!drawerRef.current?.contains(e.target)) {
+      return;
+    }
+    handleCloseDrawer();
+  };
+
+  const handleRefreshPausedChange = React.useCallback(
+    (paused) =>
+      setRefreshStatus(
+        paused ? t("mobility.updates_paused") : t("mobility.updates_resumed")
+      ),
+    []
+  );
 
   // On mount, load the map. It's very important that any dependencies (like onLocationFound, etc.)
   // are constant callbacks (ie they have no or only constant dependencies).
@@ -159,10 +202,13 @@ export default function Map() {
     if (!mapRef.current) {
       return;
     }
-    const map = new MapBuilder(mapRef.current).init().startTrackingLocation({
-      onLocationFound: handleLocationFound,
-      onLocationError: handleLocationError,
-    });
+    const map = new MapBuilder(mapRef.current)
+      .init()
+      .setRefreshEventHandlers({ onPausedChange: handleRefreshPausedChange })
+      .startTrackingLocation({
+        onLocationFound: handleLocationFound,
+        onLocationError: handleLocationError,
+      });
     // We only want this evaluated on load. We handle it imperatively otherwise.
     if (ongoingTrip) {
       map.beginTrip();
@@ -193,6 +239,36 @@ export default function Map() {
       onSelectedRemoved: handleVehicleRemove,
     });
   }, [handleVehicleClick, handleVehicleRemove, loadedMap]);
+
+  // Selecting a vehicle on the map opens it in the drawer, which comes before
+  // the map in the page. Move focus to the drawer title (or the drawer, if there is no title)
+  // once the content has loaded, so keyboard and screen reader users land on it (WCAG 2.1.3, 2.4.3).
+  // The content loads in child components, so watch the drawer rather than our own renders.
+  React.useEffect(() => {
+    const drawer = drawerRef.current;
+    if (!drawerFocusPending || !drawer) {
+      return;
+    }
+    const focusWhenLoaded = () => {
+      if (drawer.querySelector("[data-drawer-loading]")) {
+        return false;
+      }
+      const target = drawer.querySelector(".mobility-drawer-title") || drawer;
+      target.focus({ preventScroll: true });
+      setDrawerFocusPending(false);
+      return true;
+    };
+    if (focusWhenLoaded()) {
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (focusWhenLoaded()) {
+        observer.disconnect();
+      }
+    });
+    observer.observe(drawer, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [drawerFocusPending]);
 
   const navsHeight = (topNav?.clientHeight || 0) + (appNav?.clientHeight || 0);
 
@@ -231,7 +307,7 @@ export default function Map() {
             size="sm"
             variant="outline-secondary"
             className="w-100"
-            onClick={handleDismissRemovedVehicle}
+            onClick={handleCloseDrawer}
           >
             {t("common.close")}
           </Button>
@@ -265,7 +341,13 @@ export default function Map() {
 
   return (
     <div className="position-relative">
-      <Drawer footer={drawerFooter}>{drawerContent}</Drawer>
+      <Drawer ref={drawerRef} footer={drawerFooter} onKeyDown={handleDrawerKeyDown}>
+        {drawerContent}
+      </Drawer>
+      {/* Announces when the user pauses or resumes the vehicle updates. */}
+      <div className="visually-hidden" role="status">
+        {refreshStatus}
+      </div>
       <div
         ref={mapRef}
         role="region"

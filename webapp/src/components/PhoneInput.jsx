@@ -1,3 +1,4 @@
+import { t } from "../localization";
 import { maskPhoneNumber } from "../modules/maskPhoneNumber";
 import FormControlGroup from "./FormControlGroup";
 import React from "react";
@@ -15,6 +16,7 @@ export default function PhoneInput({ onPhoneChange, onChange, ...rest }) {
       name="phone"
       pattern="^(\+\d{1,2}\s)?\(?\d{3}\)?[\s-]\d{3}[\s-]\d{4}$"
       autoComplete="tel"
+      text={t("forms.phone_help")}
       errorKeys={{ pattern: "forms.invalid_phone" }}
       onChange={handleChange}
       {...rest}
