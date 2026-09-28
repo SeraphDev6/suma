@@ -1,5 +1,8 @@
 @import "./theme";
 
+/* Text-safe gold: 8.85:1 on white, 8.48:1 on #fafafa, 7.91:1 on #f2f2f2 (WCAG 1.4.6). */
+$map-focus-color: #604522;
+
 .mobility-drawer {
   position: absolute;
   top: 0;
@@ -11,6 +14,13 @@
 .mobility-drawer-main {
   background-color: map-get($theme-colors, "light");
   padding: map-get($spacers, 4);
+}
+
+/* The drawer and its title take focus from script when a vehicle is selected. */
+.mobility-drawer:focus-visible,
+.mobility-drawer-title:focus-visible {
+  outline: 2px solid $map-focus-color;
+  outline-offset: 2px;
 }
 
 .mobility-drawer-footer {
@@ -33,11 +43,22 @@
   font-size: 0.85rem;
 }
 
-/* Map control buttons (zoom, locate, pan): 44px targets, 3:1 borders,
+/* Map control buttons (zoom, locate, pan, pause): 44px targets, 3:1 borders,
 and a visible focus ring. Selectors are scoped under .leaflet-container
 so they beat Leaflet's own .leaflet-touch rules. */
 $map-control-size: 44px;
-$map-control-border: #725328;
+$map-control-border: $map-focus-color;
+
+/* Pan and zoom sit in the bottom right corner, pause and locate in the bottom left.
+On short screens, put pan and zoom side by side rather than stacked,
+so they stay clear of the drawer at the top of the map
+(the pan control is the tallest, at 136px plus its 10px margin). */
+@media (max-height: 720px) {
+  .leaflet-container .leaflet-bottom.leaflet-right {
+    display: flex;
+    align-items: flex-end;
+  }
+}
 
 .leaflet-container .leaflet-bar,
 .leaflet-container.leaflet-touch .leaflet-bar {
@@ -71,7 +92,8 @@ $map-control-border: #725328;
   gap: 2px;
 }
 
-.leaflet-container .leaflet-control-pan-button {
+.leaflet-container .leaflet-control-pan-button,
+.leaflet-container .leaflet-control-refresh-button {
   width: $map-control-size;
   height: $map-control-size;
   padding: 0;
@@ -107,7 +129,9 @@ $map-control-border: #725328;
 }
 
 .leaflet-container .leaflet-bar a:focus-visible,
-.leaflet-container .leaflet-control-pan-button:focus-visible {
+.leaflet-container .leaflet-control-pan-button:focus-visible,
+.leaflet-container .leaflet-control-refresh-button:focus-visible,
+.leaflet-container a.leaflet-popup-close-button:focus-visible {
   outline: 2px solid $map-control-border;
   outline-offset: 2px;
 }
@@ -121,7 +145,7 @@ $map-control-border: #725328;
 The white inner ring keeps the outline visible over map tiles. */
 .leaflet-container .leaflet-interactive:focus-visible,
 .leaflet-container .leaflet-marker-icon:focus-visible {
-  outline: 2px solid #725328;
+  outline: 2px solid $map-focus-color;
   outline-offset: 2px;
   box-shadow: 0 0 0 2px #fff;
 }
@@ -146,7 +170,28 @@ The white inner ring keeps the outline visible over map tiles. */
   padding: 1rem 1rem!important;
 
   p {
-    color: $gray-600;
+    /* 11.5:1 on white (WCAG 1.4.6). */
+    color: $gray-800;
+  }
+
+  /* Keep the title clear of the 44px close button
+  (which overlaps the 1rem padding by 16px). */
+  h6:first-child {
+    padding-right: 28px;
+  }
+}
+
+/* 44px target (WCAG 2.5.5); the default is 24px and #757575. */
+.leaflet-container a.leaflet-popup-close-button {
+  width: $map-control-size;
+  height: $map-control-size;
+  font-size: 22px;
+  line-height: $map-control-size;
+  color: $gray-800;
+
+  &:hover,
+  &:focus {
+    color: #000;
   }
 }
 
@@ -166,24 +211,28 @@ The white inner ring keeps the outline visible over map tiles. */
   display: flex!important;
   justify-content: center;
   align-items: center;
-  margin-left: -18px !important;
-  margin-top: -18px !important;
-  width: 36px !important;
-  height: 36px !important;
+  /* 44px target (WCAG 2.5.5), centred on the cluster location.
+  Keep in sync with the cluster iconSize in mapBuilder.js. */
+  margin-left: -22px !important;
+  margin-top: -22px !important;
+  width: 44px !important;
+  height: 44px !important;
   font-size: 16px;
   border-radius: 50%;
-  /* 6.74:1 on #fafafa; the gold $primary is only 2.17:1. */
-  color: #725328;
+  /* 8.48:1 on #fafafa; the gold $primary is only 2.17:1. */
+  color: $map-focus-color;
   background-color: #fafafa;
-  border: 2px solid #725328;
+  border: 2px solid $map-focus-color;
   /* lower than scooter value (240) */
   z-index: 230;
   box-shadow: 0 0 5px 0 rgba(201, 201, 201, 1);
 }
 
 .mobility-map-icon {
-  /* height of scooter and container */
-  height: 43px!important;
+  /* Height of the scooter and the square part of the container.
+  The marker is 44px wide (iconSize in mapBuilder.js), giving a 44x44 target (WCAG 2.5.5);
+  the pointer under the square overflows it. */
+  height: 44px!important;
   border-radius: 7px;
   box-shadow: 0 0 5px 0 rgba(201, 201, 201, 1);
 }
@@ -206,6 +255,12 @@ The white inner ring keeps the outline visible over map tiles. */
 
 .mobility-location-accuracy-circle-transition {
   transition: all 1000ms linear 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobility-location-accuracy-circle-transition {
+    transition: none;
+  }
 }
 
 .trips-week-divider {

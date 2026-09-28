@@ -6,7 +6,7 @@ import React from "react";
 export default function DrawerLoading() {
   return (
     <DrawerContents>
-      <div role="status">
+      <div role="status" data-drawer-loading="true">
         <PageLoader />
         <span className="visually-hidden">{t("common.loading")}</span>
       </div>
