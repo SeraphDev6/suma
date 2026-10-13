@@ -126,7 +126,7 @@ function FulfillmentOption({ order, onOrderUpdated }) {
           {order.fulfillmentOptionEditable && (
             <Button
               variant="link"
-              className="ms-2 px-2 py-1"
+              className="p-0 ms-2"
               aria-label={t("food.edit_fulfillment")}
               onClick={() => {
                 setOptionId(order.fulfillmentOption?.id || 0);
@@ -217,7 +217,11 @@ function PressAndHoldToClaim({ id, canClaim, offeringDescription, onOrderClaim }
         <p className="small mb-0">
           {t("food.claiming_instructions", { offeringDescription: offeringDescription })}
         </p>
-        <PressAndHold size={200} onHeld={handleOrderClaim}>
+        <PressAndHold
+          size={200}
+          onHeld={handleOrderClaim}
+          releaseLabel={t("food.release_to_confirm")}
+        >
           {t(
             "food.press_and_hold",
             {},
