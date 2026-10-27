@@ -112,6 +112,7 @@
   "errors.network_error": "Un error de conectividad en la red ocurrió. Conéctate al internet y inténta de nuevo.",
   "errors.no_active_trip": "No hay un viajes activos.",
   "errors.ongoing_trip": "Debe finalizar el viaje que está en curso antes de iniciar un nuevo viaje.",
+  "errors.otp_incomplete": "Ingresa los 6 dígitos del código.",
   "errors.product_unavailable": "Lo sentimos, este producto ya no está disponible.",
   "errors.rate_not_found": "$t(strings.errors.unhandled_error)",
   "errors.read_only_technical_error": "$t(strings.errors.read_only_unverified)",
