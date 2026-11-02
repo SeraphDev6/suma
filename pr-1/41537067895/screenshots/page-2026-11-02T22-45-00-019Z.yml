@@ -1,0 +1,44 @@
+- generic [ref=f2e3]:
+  - link "Saltar al contenido principal" [ref=f2e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f2e5]:
+    - navigation "Menú principal" [ref=f2e7]:
+      - generic [ref=f2e8]:
+        - link "Suma, Inicio" [ref=f2e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Logo de suma que muestra una mazorca de maíz encima de una moneda, todo dentro de un círculo y sombreado en dorado." [ref=f2e10]
+          - paragraph [ref=f2e11]: Suma
+        - status [aria-hidden] [ref=f2e12]:
+          - generic [aria-hidden] [ref=f2e13]: 
+          - generic [ref=f2e14]: Estás sin conexión
+        - button "Abrir menú" [ref=f2e15] [cursor=pointer]
+      - text:                 
+    - main [ref=f2e19]:
+      - generic [ref=f2e22]:
+        - navigation "Ruta de navegación" [ref=f2e23]:
+          - list [ref=f2e24]:
+            - listitem [ref=f2e25]:
+              - button "Volver a la página anterior" [ref=f2e26] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f2e27]: 
+                - text: Volver
+            - listitem
+        - heading "Cuentas de pago" [level=1] [ref=f2e28]
+        - paragraph [ref=f2e29]:
+          - text: Para añadir fondos a tu cuenta, se requiere por lo menos una
+          - link "fuente de financiamiento" [ref=f2e30] [cursor=pointer]:
+            - /url: /app/glossary#glossary-funding_source
+          - text: . Por lo regular, es una cuenta bancaria, pero pueda haber otras opciones abajo.
+        - paragraph [ref=f2e31]:
+          - text: Protegemos su información financiera con
+          - strong [ref=f2e32]: cifrado de nivel bancario
+          - text: .
+          - strong [ref=f2e33]: Nunca se compartirá sin su consentimiento
+          - text: . Lea la
+          - link "Política de privacidad de Suma (se abre en una ventana nueva)" [ref=f2e34] [cursor=pointer]:
+            - /url: https://app.mysuma.org/privacy-policy
+            - text: Política de privacidad de Suma
+            - generic [ref=f2e35]: (se abre en una ventana nueva)
+          - text: para saber cómo usamos y protegemos su información financiera.
+        - generic [ref=f2e36]:
+          - heading "Otras Fuentes" [level=2] [ref=f2e38]
+          - paragraph [ref=f2e40]: Próximamente se podrá añadir fondos de fuentes adicionales, como dinero en efectivo, giro bancario o depositos por un amigo.

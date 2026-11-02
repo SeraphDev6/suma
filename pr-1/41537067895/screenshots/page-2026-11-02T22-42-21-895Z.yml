@@ -1,0 +1,67 @@
+- generic [ref=f1e3]:
+  - link "Saltar al contenido principal" [ref=f1e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f1e5]:
+    - navigation "Menú principal" [ref=f1e7]:
+      - generic [ref=f1e8]:
+        - link "Suma, Inicio" [ref=f1e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Logo de suma que muestra una mazorca de maíz encima de una moneda, todo dentro de un círculo y sombreado en dorado." [ref=f1e10]
+          - paragraph [ref=f1e11]: Suma
+        - status [aria-hidden] [ref=f1e12]:
+          - generic [aria-hidden] [ref=f1e13]: 
+          - generic [ref=f1e14]: Estás sin conexión
+        - button "Abrir menú" [ref=f1e15] [cursor=pointer]
+      - text:  
+    - main [active] [ref=f1e19]:
+      - generic [ref=f1e22]:
+        - heading "Mapa del sitio" [level=1] [ref=f1e23]
+        - paragraph [ref=f1e24]: Enlaces a las páginas principales de suma, en un solo lugar.
+        - region [ref=f1e25]:
+          - heading "Secciones principales" [level=2] [ref=f1e26]
+          - list [ref=f1e27]:
+            - listitem [ref=f1e28]:
+              - link "Inicio" [ref=f1e29] [cursor=pointer]:
+                - /url: /app/dashboard
+            - listitem [ref=f1e30]:
+              - link "Movilidad" [ref=f1e31] [cursor=pointer]:
+                - /url: /app/mobility
+            - listitem [ref=f1e32]:
+              - link "Comida" [ref=f1e33] [cursor=pointer]:
+                - /url: /app/food
+            - listitem [ref=f1e34]:
+              - link "Utilidades" [ref=f1e35] [cursor=pointer]:
+                - /url: /app/utilities
+        - region [ref=f1e36]:
+          - heading "Tu cuenta" [level=2] [ref=f1e37]
+          - list [ref=f1e38]:
+            - listitem [ref=f1e39]:
+              - link "Métodos de Pago" [ref=f1e40] [cursor=pointer]:
+                - /url: /app/funding
+            - listitem [ref=f1e41]:
+              - link "Historial de transacciones" [ref=f1e42] [cursor=pointer]:
+                - /url: /app/ledgers
+            - listitem [ref=f1e43]:
+              - link "Historial De Pedidos" [ref=f1e44] [cursor=pointer]:
+                - /url: /app/order-history
+            - listitem [ref=f1e45]:
+              - link "Reclamar pedidos" [ref=f1e46] [cursor=pointer]:
+                - /url: /app/unclaimed-orders
+            - listitem [ref=f1e47]:
+              - link "Viajes de micromovilidad" [ref=f1e48] [cursor=pointer]:
+                - /url: /app/trips
+            - listitem [ref=f1e49]:
+              - link "Preferencias" [ref=f1e50] [cursor=pointer]:
+                - /url: /app/preferences
+        - region [ref=f1e51]:
+          - heading "Sobre suma" [level=2] [ref=f1e52]
+          - list [ref=f1e53]:
+            - listitem [ref=f1e54]:
+              - link "Términos de Uso" [ref=f1e55] [cursor=pointer]:
+                - /url: /app/terms-of-use
+            - listitem [ref=f1e56]:
+              - link "Política de Privacidad" [ref=f1e57] [cursor=pointer]:
+                - /url: /app/privacy-policy
+            - listitem [ref=f1e58]:
+              - link "Glosario" [ref=f1e59] [cursor=pointer]:
+                - /url: /app/glossary

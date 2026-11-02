@@ -1,0 +1,37 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - navigation "Main menu" [ref=e7]:
+        - generic [ref=e8]:
+          - link "Suma, Home" [ref=e9] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=e10]
+            - paragraph [ref=e11]: Suma
+          - status [aria-hidden] [ref=e12]:
+            - generic [aria-hidden] [ref=e13]: 
+            - generic [ref=e14]: You are offline
+          - button "Open menu" [ref=e15] [cursor=pointer]
+        - text:                 
+      - navigation "Sections" [ref=e19]:
+        - link "Home" [ref=e20] [cursor=pointer]:
+          - /url: /app/dashboard
+        - link "Mobility" [ref=e21] [cursor=pointer]:
+          - /url: /app/mobility
+        - link "Food" [ref=e22] [cursor=pointer]:
+          - /url: /app/food
+        - link "Utilities" [ref=e23] [cursor=pointer]:
+          - /url: /app/utilities
+    - main [ref=e24]:
+      - heading "Dashboard" [level=1] [ref=e25]
+      - img "Market stand showing fresh fruit and vegetables." [ref=e26]
+      - generic [ref=e28]:
+        - paragraph [ref=e29]: Helping our community save money on things you buy the most - all in one place.
+        - link "About suma (opens in a new window)" [ref=e30] [cursor=pointer]:
+          - /url: https://mysuma.org/
+          - text: About suma
+          - generic [ref=e31]: (opens in a new window)
+          - generic [aria-hidden] [ref=e32]: 
+      - status [ref=e33]:
+        - generic [ref=e36]: Loading

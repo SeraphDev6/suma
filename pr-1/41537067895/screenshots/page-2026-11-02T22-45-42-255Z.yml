@@ -1,0 +1,66 @@
+- generic [ref=f3e3]:
+  - link "Saltar al contenido principal" [ref=f3e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f3e5]:
+    - navigation "Menú principal" [ref=f3e7]:
+      - generic [ref=f3e8]:
+        - link "Suma, Inicio" [ref=f3e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Logo de suma que muestra una mazorca de maíz encima de una moneda, todo dentro de un círculo y sombreado en dorado." [ref=f3e10]
+          - paragraph [ref=f3e11]: Suma
+        - status [aria-hidden] [ref=f3e12]:
+          - generic [aria-hidden] [ref=f3e13]: 
+          - generic [ref=f3e14]: Estás sin conexión
+        - button "Abrir menú" [ref=f3e15] [cursor=pointer]
+      - text:                 
+    - main [ref=f3e19]:
+      - generic [ref=f3e22]:
+        - navigation "Ruta de navegación" [ref=f3e23]:
+          - list [ref=f3e24]:
+            - listitem [ref=f3e25]:
+              - button "Volver a la página anterior" [ref=f3e26] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f3e27]: 
+                - text: Volver
+            - listitem
+        - heading "Agregar su tarjeta" [level=1] [ref=f3e28]
+        - paragraph [ref=f3e29]:
+          - text: Protegemos su información financiera con
+          - strong [ref=f3e30]: cifrado de nivel bancario
+          - text: .
+          - strong [ref=f3e31]: Nunca se compartirá sin su consentimiento
+          - text: . Lea la
+          - link "Política de privacidad de Suma (se abre en una ventana nueva)" [ref=f3e32] [cursor=pointer]:
+            - /url: https://app.mysuma.org/privacy-policy
+            - text: Política de privacidad de Suma
+            - generic [ref=f3e33]: (se abre en una ventana nueva)
+          - text: para saber cómo usamos y protegemos su información financiera.
+        - generic [ref=f3e34]:
+          - paragraph [ref=f3e35]: Los campos marcados con * son obligatorios
+          - generic [ref=f3e37]:
+            - generic [ref=f3e38]: Nombre *
+            - textbox "Nombre" [ref=f3e39]
+            - generic [ref=f3e40]: Nombre como aparece impreso en la tarjeta
+          - generic [ref=f3e42]:
+            - generic [ref=f3e43]: Número de tarjeta *
+            - textbox "Número de tarjeta" [ref=f3e44]
+            - generic [ref=f3e45]: El número largo en el frente de tu tarjeta
+          - generic [ref=f3e46]:
+            - generic [ref=f3e47]:
+              - generic [ref=f3e48]: Vencimiento (MM / AA) *
+              - textbox "Vencimiento (MM / AA)" [ref=f3e49]
+              - generic [ref=f3e50]: Mes y año, por ejemplo 04 / 29
+            - generic [ref=f3e51]:
+              - generic [ref=f3e52]: Código de seguridad (CVC) *
+              - textbox "Código de seguridad (CVC)" [ref=f3e53]
+              - generic [ref=f3e54]: 3 dígitos en el reverso de la tarjeta, o 4 en el frente si es American Express
+          - generic [ref=f3e56]:
+            - button "Volver" [ref=f3e57] [cursor=pointer]
+            - button "Continuar" [ref=f3e58] [cursor=pointer]
+          - generic [ref=f3e62]:
+            - generic [ref=f3e63]:
+              - generic [ref=f3e66]: •••• •••• •••• ••••
+              - generic [ref=f3e67]: YOUR NAME HERE
+              - generic [ref=f3e68]:
+                - generic [ref=f3e69]: valid thru
+                - generic [ref=f3e70]: •• / ••
+            - generic [ref=f3e72]: •••

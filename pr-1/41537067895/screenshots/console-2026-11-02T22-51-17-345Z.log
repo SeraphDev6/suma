@@ -1,0 +1,13 @@
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'battery'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'document-domain'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'execution-while-not-rendered'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'execution-while-out-of-viewport'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'navigation-override'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'web-share'. @ :0
+[     161ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:22001/api/v1/commerce/checkouts/1:0
+[     163ms] [ERROR] [api.responses] GET /api/v1/commerce/checkouts/1 403 method=GET url=/api/v1/commerce/checkouts/1 message=Forbidden status=403 code=forbidden message=Request failed with status code 403 @ http://localhost:22001/app/assets/index-D4Z7Zvpw.js:65
+[     186ms] AxiosError: Request failed with status code 403
+    at wM (http://localhost:22001/app/assets/index-D4Z7Zvpw.js:94:1091)
+    at XMLHttpRequest.R (http://localhost:22001/app/assets/index-D4Z7Zvpw.js:94:5953)
+    at Fo.request (http://localhost:22001/app/assets/index-D4Z7Zvpw.js:96:2094)

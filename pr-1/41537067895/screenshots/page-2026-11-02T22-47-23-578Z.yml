@@ -1,0 +1,91 @@
+- generic [ref=f4e1]:
+  - generic [ref=f4e3]:
+    - link "Saltar al contenido principal" [ref=f4e4] [cursor=pointer]:
+      - /url: "#main"
+    - generic [ref=f4e5]:
+      - navigation "Menú principal" [ref=f4e7]:
+        - generic [ref=f4e8]:
+          - link "Suma, Inicio" [ref=f4e9] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img "Logo de suma que muestra una mazorca de maíz encima de una moneda, todo dentro de un círculo y sombreado en dorado." [ref=f4e10]
+            - paragraph [ref=f4e11]: Suma
+          - status [aria-hidden] [ref=f4e12]:
+            - generic [aria-hidden] [ref=f4e13]: 
+            - generic [ref=f4e14]: Estás sin conexión
+          - button "Abrir menú" [ref=f4e15] [cursor=pointer]
+        - text:                 
+      - main [ref=f4e19]:
+        - generic [ref=f4e22]:
+          - navigation "Ruta de navegación" [ref=f4e23]:
+            - list [ref=f4e24]:
+              - listitem [ref=f4e25]:
+                - button "Volver a la página anterior" [ref=f4e26] [cursor=pointer]:
+                  - generic [aria-hidden] [ref=f4e27]: 
+                  - text: Volver
+              - listitem
+          - heading "Vincular una cuenta bancaria" [level=1] [ref=f4e28]
+          - paragraph [ref=f4e29]:
+            - text: Protegemos su información financiera con
+            - strong [ref=f4e30]: cifrado de nivel bancario
+            - text: .
+            - strong [ref=f4e31]: Nunca se compartirá sin su consentimiento
+            - text: . Lea la
+            - link "Política de privacidad de Suma (se abre en una ventana nueva)" [ref=f4e32] [cursor=pointer]:
+              - /url: https://app.mysuma.org/privacy-policy
+              - text: Política de privacidad de Suma
+              - generic [ref=f4e33]: (se abre en una ventana nueva)
+            - text: para saber cómo usamos y protegemos su información financiera.
+          - generic [ref=f4e34]:
+            - paragraph [ref=f4e35]: Los campos marcados con * son obligatorios
+            - generic [ref=f4e37]:
+              - generic [ref=f4e38]: Apodo *
+              - textbox "Apodo" [invalid] [ref=f4e39]
+              - generic [ref=f4e73]: Completa «Apodo» para continuar.
+              - generic [ref=f4e40]: El nombre utilizado para referirse a la cuenta.
+            - generic [ref=f4e42]:
+              - generic [ref=f4e43]: Código de Identificación *
+              - textbox "Código de Identificación" [invalid] [ref=f4e44]
+              - generic [ref=f4e74]: Completa «Código de Identificación» para continuar.
+              - generic [ref=f4e45]:
+                - text: Ingrese el número de ruta de 9 dígitos de su cuenta bancaria. Puede encontrar esta información en el portal de banco en línea, o consultando
+                - link "cómo encontrar los datos bancarios en un cheque de papel" [ref=f4e46] [cursor=pointer]:
+                  - /url: /app/link-bank-account#check-details
+                - text: .
+            - generic [ref=f4e48]:
+              - generic [ref=f4e49]: Número de Cuenta *
+              - textbox "Número de Cuenta" [invalid] [ref=f4e50]
+              - generic [ref=f4e75]: Completa «Número de Cuenta» para continuar.
+              - generic [ref=f4e51]:
+                - text: El número de tu cuenta bancaria. Puede encontrar esta información en el portal de banco en línea, o consultando
+                - link "cómo encontrar los datos bancarios en un cheque de papel" [ref=f4e52] [cursor=pointer]:
+                  - /url: /app/link-bank-account#check-details
+                - text: .
+            - generic [ref=f4e54]:
+              - generic [ref=f4e55]: Confirmar el Número de Cuenta *
+              - textbox "Confirmar el Número de Cuenta" [ref=f4e56]
+              - generic [ref=f4e57]: Vuelve a introducir tu Número de Cuenta para confirmar.
+            - group "Tipo de cuenta" [ref=f4e59]:
+              - generic [ref=f4e61]:
+                - generic [ref=f4e62]:
+                  - radio "Cheques" [checked] [ref=f4e63]
+                  - generic [ref=f4e64]: Cheques
+                - generic [ref=f4e65]:
+                  - radio "Ahorros" [ref=f4e66]
+                  - generic [ref=f4e67]: Ahorros
+              - text: Elegir el tipo de cuenta. Si no estás seguro, elige Cheques
+            - paragraph [ref=f4e68]: Primero, usted nos envía su información. Después, un especialista de Experiencia de Miembros se comunicará con usted para confirmar la cuenta.
+            - generic [ref=f4e70]:
+              - button "Volver" [ref=f4e71] [cursor=pointer]
+              - button "Continuar" [ref=f4e72] [cursor=pointer]
+  - dialog [active] [ref=f4e77]:
+    - generic [ref=f4e78]:
+      - generic [ref=f4e79]:
+        - generic [ref=f4e80]: ¿Cuál es mi número de cuenta?
+        - button "Close" [ref=f4e81] [cursor=pointer]
+      - generic [ref=f4e82]:
+        - paragraph [ref=f4e83]:
+          - text: Al calce de un cheque a tres conjuntos numericos. El primero es el
+          - link "número de ruta" [ref=f4e84] [cursor=pointer]:
+            - /url: /app/glossary#glossary-routing_number
+          - text: de 9 dígitos. El segundo es tu número de cuenta. El tercero, que puedes ignorar, es el número del cheque.
+        - img "Cheque bancario que muestra la ubicación del número de ruta en la esquina inferior izquierda, el número de cuenta en la parte inferior central y el número de cheque en la parte inferior derecha." [ref=f4e85]

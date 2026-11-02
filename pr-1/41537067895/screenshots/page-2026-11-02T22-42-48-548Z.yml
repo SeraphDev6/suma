@@ -1,0 +1,16 @@
+- generic [ref=f4e3]:
+  - link "Skip to main content" [ref=f4e4] [cursor=pointer]:
+    - /url: "#main"
+  - main [ref=f4e6]:
+    - generic [ref=f4e8]:
+      - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f4e9]
+      - heading "Welcome to Suma!" [level=1] [ref=f4e10]
+      - generic [ref=f4e11]:
+        - button "Continue" [ref=f4e12] [cursor=pointer]
+        - button "Learn More about suma (opens in a new window)" [ref=f4e13] [cursor=pointer]:
+          - text: Learn More
+          - generic [ref=f4e14]: about suma
+          - generic [ref=f4e15]: (opens in a new window)
+          - generic [aria-hidden] [ref=f4e16]: 
+        - button "En Español" [ref=f4e18] [cursor=pointer]:
+          - generic [aria-hidden] [ref=f4e19]: 

@@ -1,0 +1,38 @@
+- generic [ref=f2e3]:
+  - link "Saltar al contenido principal" [ref=f2e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f2e5]:
+    - navigation "Menú principal" [ref=f2e7]:
+      - generic [ref=f2e8]:
+        - link "Suma, Inicio" [ref=f2e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Logo de suma que muestra una mazorca de maíz encima de una moneda, todo dentro de un círculo y sombreado en dorado." [ref=f2e10]
+          - paragraph [ref=f2e11]: Suma
+        - status [aria-hidden] [ref=f2e12]:
+          - generic [aria-hidden] [ref=f2e13]: 
+          - generic [ref=f2e14]: Estás sin conexión
+        - button "Abrir menú" [ref=f2e15] [cursor=pointer]
+      - text:  
+    - main [ref=f2e19]:
+      - generic [ref=f2e22]:
+        - heading "Glosario" [level=1] [ref=f2e23]
+        - paragraph [ref=f2e24]: Estas son palabras que puedes ver en suma y lo que significan.
+        - generic [ref=f2e25]:
+          - term [ref=f2e26]: Cuenta privada
+          - definition [ref=f2e27]: Una cuenta con un proveedor que le oculta tu número de teléfono y tu correo electrónico
+          - term [ref=f2e28]: Estado de cuenta
+          - definition [ref=f2e29]: Una lista del dinero que se agregó y se gastó en uno de tus saldos de suma
+          - term [ref=f2e30]: Fuente de financiamiento
+          - definition [ref=f2e31]: Una cuenta bancaria o tarjeta que usas para agregar dinero a suma
+          - term [ref=f2e32]: Micromovilidad
+          - definition [ref=f2e33]: Vehículos pequeños que alquilas para viajes cortos, como patinetas (scooters) y bicicletas
+          - term [ref=f2e34]: Número de ruta (código de identificación)
+          - definition [ref=f2e35]: El número de 9 dígitos que identifica a tu banco
+          - term [ref=f2e36]: Oferta
+          - definition [ref=f2e37]: Un grupo de productos que puedes pedir por tiempo limitado
+          - term [ref=f2e38]: Pedido sin reclamar
+          - definition [ref=f2e39]: Un pedido que ya pagaste pero que aún no has recogido
+          - term [ref=f2e40]: Proveedor
+          - definition [ref=f2e41]: Un negocio que vende productos o servicios a través de suma
+          - term [ref=f2e42]: Subsidio
+          - definition [ref=f2e43]: Dinero de un programa asociado que reduce el precio que pagas

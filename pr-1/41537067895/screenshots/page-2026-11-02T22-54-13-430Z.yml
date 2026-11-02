@@ -1,0 +1,26 @@
+- generic [ref=f25e3]:
+  - link "Skip to main content" [ref=f25e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f25e5]:
+    - navigation "Main menu" [ref=f25e7]:
+      - generic [ref=f25e8]:
+        - link "Suma, Home" [ref=f25e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f25e10]
+          - paragraph [ref=f25e11]: Suma
+        - status [aria-hidden] [ref=f25e12]:
+          - generic [aria-hidden] [ref=f25e13]: 
+          - generic [ref=f25e14]: You are offline
+        - button "Open menu" [ref=f25e15] [cursor=pointer]
+      - text:                 
+    - main [ref=f25e19]:
+      - generic [ref=f25e20]:
+        - generic [ref=f25e21]:
+          - heading "Micromobility Trips" [level=1] [ref=f25e22]
+          - paragraph [ref=f25e23]:
+            - text: View your ride history. Head over to the
+            - link "Mobility" [ref=f25e24] [cursor=pointer]:
+              - /url: /app/mobility
+            - text: page to take a ride
+        - status [ref=f25e25]:
+          - generic [ref=f25e28]: Loading
