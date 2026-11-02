@@ -1,0 +1,29 @@
+- generic [ref=f11e3]:
+  - link "Skip to main content" [ref=f11e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f11e5]:
+    - navigation "Main menu" [ref=f11e7]:
+      - generic [ref=f11e8]:
+        - link "Suma, Home" [ref=f11e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f11e10]
+          - paragraph [ref=f11e11]: Suma
+        - status [aria-hidden] [ref=f11e12]:
+          - generic [aria-hidden] [ref=f11e13]: 
+          - generic [ref=f11e14]: You are offline
+        - button "Open menu" [ref=f11e15] [cursor=pointer]
+      - text:                 
+    - main [ref=f11e19]:
+      - generic [ref=f11e20]:
+        - navigation "Breadcrumb" [ref=f11e21]:
+          - list [ref=f11e22]:
+            - listitem [ref=f11e23]:
+              - button "Back to the previous page" [ref=f11e24] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f11e25]: 
+                - text: Back
+            - listitem
+        - heading "Claim Orders" [level=1] [ref=f11e26]
+        - paragraph [ref=f11e27]: Orders that are ready to claim will appear below.
+      - separator [ref=f11e28]
+      - status [ref=f11e30]:
+        - generic [ref=f11e33]: Loading

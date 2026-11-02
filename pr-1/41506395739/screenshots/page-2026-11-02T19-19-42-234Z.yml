@@ -1,0 +1,67 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e5]:
+    - navigation "Main menu" [ref=e7]:
+      - generic [ref=e8]:
+        - link "Suma, Home" [ref=e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=e10]
+          - paragraph [ref=e11]: Suma
+        - status [aria-hidden] [ref=e12]:
+          - generic [aria-hidden] [ref=e13]: 
+          - generic [ref=e14]: You are offline
+        - button "Open menu" [ref=e15] [cursor=pointer]
+      - text:  
+    - main [ref=e19]:
+      - generic [ref=e22]:
+        - heading "Site Map" [level=1] [ref=e23]
+        - paragraph [ref=e24]: Links to the main pages in suma, in one place.
+        - region [ref=e25]:
+          - heading "Main sections" [level=2] [ref=e26]
+          - list [ref=e27]:
+            - listitem [ref=e28]:
+              - link "Home" [ref=e29] [cursor=pointer]:
+                - /url: /app/dashboard
+            - listitem [ref=e30]:
+              - link "Mobility" [ref=e31] [cursor=pointer]:
+                - /url: /app/mobility
+            - listitem [ref=e32]:
+              - link "Food" [ref=e33] [cursor=pointer]:
+                - /url: /app/food
+            - listitem [ref=e34]:
+              - link "Utilities" [ref=e35] [cursor=pointer]:
+                - /url: /app/utilities
+        - region [ref=e36]:
+          - heading "Your account" [level=2] [ref=e37]
+          - list [ref=e38]:
+            - listitem [ref=e39]:
+              - link "Payment Methods" [ref=e40] [cursor=pointer]:
+                - /url: /app/funding
+            - listitem [ref=e41]:
+              - link "Transaction History" [ref=e42] [cursor=pointer]:
+                - /url: /app/ledgers
+            - listitem [ref=e43]:
+              - link "Order History" [ref=e44] [cursor=pointer]:
+                - /url: /app/order-history
+            - listitem [ref=e45]:
+              - link "Claim Orders" [ref=e46] [cursor=pointer]:
+                - /url: /app/unclaimed-orders
+            - listitem [ref=e47]:
+              - link "Micromobility Trips" [ref=e48] [cursor=pointer]:
+                - /url: /app/trips
+            - listitem [ref=e49]:
+              - link "Preferences" [ref=e50] [cursor=pointer]:
+                - /url: /app/preferences
+        - region [ref=e51]:
+          - heading "About suma" [level=2] [ref=e52]
+          - list [ref=e53]:
+            - listitem [ref=e54]:
+              - link "Terms of Use" [ref=e55] [cursor=pointer]:
+                - /url: /app/terms-of-use
+            - listitem [ref=e56]:
+              - link "Privacy Policy" [ref=e57] [cursor=pointer]:
+                - /url: /app/privacy-policy
+            - listitem [ref=e58]:
+              - link "Glossary" [ref=e59] [cursor=pointer]:
+                - /url: /app/glossary

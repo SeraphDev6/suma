@@ -1,0 +1,143 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - navigation "Main menu" [ref=e7]:
+        - generic [ref=e8]:
+          - link "Suma, Home" [ref=e9] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=e10]
+            - paragraph [ref=e11]: Suma
+          - status [aria-hidden] [ref=e12]:
+            - generic [aria-hidden] [ref=e13]: 
+            - generic [ref=e14]: You are offline
+          - button "Open menu" [active] [ref=e15] [cursor=pointer]
+        - generic [ref=e71]:
+          - heading "Menu" [level=2] [ref=e72]
+          - button "Dashboard" [ref=e73] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e74]: 
+            - generic [aria-hidden] [ref=e75]: 
+            - text: Dashboard
+          - button "Private Accounts" [ref=e76] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e77]: 
+            - generic [aria-hidden] [ref=e78]: 
+            - text: Private Accounts
+          - button "Payment Methods" [ref=e79] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e80]: 
+            - generic [aria-hidden] [ref=e81]: 
+            - text: Payment Methods
+          - button "Transaction History" [ref=e82] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e83]: 
+            - generic [aria-hidden] [ref=e84]: 
+            - text: Transaction History
+          - button "Order History" [ref=e85] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e86]: 
+            - generic [aria-hidden] [ref=e87]: 
+            - text: Order History
+          - button "Micromobility Trips" [ref=e88] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e89]: 
+            - generic [aria-hidden] [ref=e90]: 
+            - text: Micromobility Trips
+          - button "Preferences" [ref=e91] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e92]: 
+            - generic [aria-hidden] [ref=e93]: 
+            - text: Preferences
+          - button "Logout" [ref=e94] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e95]: 
+            - text: Logout
+          - heading "Language" [level=2] [ref=e96]
+          - group "Language" [ref=e97]:
+            - button "English" [pressed] [ref=e98] [cursor=pointer]
+            - button "En Español" [ref=e99] [cursor=pointer]: Español
+          - generic [ref=e100]:
+            - heading "Display settings" [level=2] [ref=e101]
+            - generic [ref=e102]:
+              - checkbox "More spacing between lines and paragraphs" [ref=e103]
+              - generic [ref=e104]: More spacing between lines and paragraphs
+          - heading "Help and legal" [level=2] [ref=e105]
+          - generic [ref=e106]:
+            - generic [ref=e107]: © 2026 mysuma.org
+            - generic [ref=e108]:
+              - link "Instagram (opens in a new window)" [ref=e109] [cursor=pointer]:
+                - /url: https://www.instagram.com/mysuma/
+                - generic [aria-hidden] [ref=e110]: 
+              - link "LinkedIn (opens in a new window)" [ref=e111] [cursor=pointer]:
+                - /url: https://www.linkedin.com/company/mysuma/
+                - generic [aria-hidden] [ref=e112]: 
+          - link "Terms of Use" [ref=e114] [cursor=pointer]:
+            - /url: /app/terms-of-use
+          - link "Privacy Policy" [ref=e116] [cursor=pointer]:
+            - /url: /app/privacy-policy
+          - link "Glossary" [ref=e118] [cursor=pointer]:
+            - /url: /app/glossary
+          - link "Site Map" [ref=e120] [cursor=pointer]:
+            - /url: /app/sitemap
+          - link "Contact Us" [ref=e122] [cursor=pointer]:
+            - /url: mailto:info@mysuma.org
+      - navigation "Sections" [ref=e19]:
+        - link "Home" [ref=e20] [cursor=pointer]:
+          - /url: /app/dashboard
+        - link "Mobility" [ref=e21] [cursor=pointer]:
+          - /url: /app/mobility
+        - link "Food" [ref=e22] [cursor=pointer]:
+          - /url: /app/food
+        - link "Utilities" [ref=e23] [cursor=pointer]:
+          - /url: /app/utilities
+    - main [ref=e24]:
+      - heading "Dashboard" [level=1] [ref=e25]
+      - img "Market stand showing fresh fruit and vegetables." [ref=e26]
+      - generic [ref=e28]:
+        - paragraph [ref=e29]: Helping our community save money on things you buy the most - all in one place.
+        - link "About suma (opens in a new window)" [ref=e30] [cursor=pointer]:
+          - /url: https://mysuma.org/
+          - text: About suma
+          - generic [ref=e31]: (opens in a new window)
+          - generic [aria-hidden] [ref=e32]: 
+      - generic [ref=e33]:
+        - heading "Programs" [level=2] [ref=e34]
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - link "Scooters":
+              - /url: /app/mobility
+              - heading "Scooters" [level=3] [ref=e37] [cursor=pointer]
+            - link [aria-hidden] [ref=e38] [cursor=pointer]:
+              - /url: /app/mobility
+            - generic [ref=e40]: Ride electric scooters
+            - paragraph [ref=e41]: Program ends Nov 2, 2027
+            - button "Check out mobility map" [ref=e42] [cursor=pointer]:
+              - text: Check out mobility map
+              - generic [aria-hidden] [ref=e43]: 
+          - generic [ref=e44]:
+            - link "Bikes":
+              - /url: /app/mobility
+              - heading "Bikes" [level=3] [ref=e45] [cursor=pointer]
+            - link [aria-hidden] [ref=e46] [cursor=pointer]:
+              - /url: /app/mobility
+            - generic [ref=e48]: Ride electric bikes
+            - paragraph [ref=e49]: Program ends Nov 2, 2027
+            - button "Check out mobility map" [ref=e50] [cursor=pointer]:
+              - text: Check out mobility map
+              - generic [aria-hidden] [ref=e51]: 
+          - generic [ref=e52]:
+            - link "Farmers Markets":
+              - /url: /app/food
+              - heading "Farmers Markets" [level=3] [ref=e53] [cursor=pointer]
+            - link [aria-hidden] [ref=e54] [cursor=pointer]:
+              - /url: /app/food
+            - generic [ref=e56]: Get subsidized local food
+            - paragraph [ref=e57]: Program ends Nov 2, 2027
+            - button "See offering" [ref=e58] [cursor=pointer]:
+              - text: See offering
+              - generic [aria-hidden] [ref=e59]: 
+          - generic [ref=e60]:
+            - link "Holiday Special":
+              - /url: /app/food
+              - heading "Holiday Special" [level=3] [ref=e61] [cursor=pointer]
+            - link [aria-hidden] [ref=e62] [cursor=pointer]:
+              - /url: /app/food
+            - generic [ref=e64]: Holiday special
+            - paragraph [ref=e65]: Program ends Nov 2, 2027
+            - button "Yummy food" [ref=e66] [cursor=pointer]:
+              - text: Yummy food
+              - generic [aria-hidden] [ref=e67]: 

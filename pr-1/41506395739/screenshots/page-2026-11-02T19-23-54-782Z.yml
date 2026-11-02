@@ -1,0 +1,75 @@
+- generic [ref=f4e3]:
+  - link "Skip to main content" [ref=f4e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f4e5]:
+    - navigation "Main menu" [ref=f4e7]:
+      - generic [ref=f4e8]:
+        - link "Suma, Home" [ref=f4e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f4e10]
+          - paragraph [ref=f4e11]: Suma
+        - status [aria-hidden] [ref=f4e12]:
+          - generic [aria-hidden] [ref=f4e13]: 
+          - generic [ref=f4e14]: You are offline
+        - button "Open menu" [ref=f4e15] [cursor=pointer]
+      - text:                 
+    - main [ref=f4e19]:
+      - generic [ref=f4e22]:
+        - navigation "Breadcrumb" [ref=f4e23]:
+          - list [ref=f4e24]:
+            - listitem [ref=f4e25]:
+              - button "Back to the previous page" [ref=f4e26] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f4e27]: 
+                - text: Back
+            - listitem
+        - heading "Link bank account" [level=1] [ref=f4e28]
+        - paragraph [ref=f4e29]:
+          - text: We protect your financial information with
+          - strong [ref=f4e30]: bank-level encryption
+          - text: . It is
+          - strong [ref=f4e31]: never shared without your consent
+          - text: . Read
+          - link "Suma's Privacy Policy (opens in a new window)" [ref=f4e32] [cursor=pointer]:
+            - /url: https://app.mysuma.org/privacy-policy
+            - text: Suma's Privacy Policy
+            - generic [ref=f4e33]: (opens in a new window)
+          - text: to learn how we protect and use your financial information.
+        - generic [ref=f4e34]:
+          - paragraph [ref=f4e35]: Fields marked * are required
+          - generic [ref=f4e37]:
+            - generic [ref=f4e38]: Nickname *
+            - textbox "Nickname" [ref=f4e39]
+            - generic [ref=f4e40]: The name used to refer to the account in Suma.
+          - generic [ref=f4e42]:
+            - generic [ref=f4e43]: Routing Number *
+            - textbox "Routing Number" [ref=f4e44]
+            - generic [ref=f4e45]:
+              - text: 9-digit number for your bank. You can get these from your online banking portal, or check out
+              - link "how to find your bank details from a paper check" [ref=f4e46] [cursor=pointer]:
+                - /url: /app/link-bank-account#check-details
+              - text: .
+          - generic [ref=f4e48]:
+            - generic [ref=f4e49]: Account Number *
+            - textbox "Account Number" [ref=f4e50]
+            - generic [ref=f4e51]:
+              - text: Number of your bank account. You can get these from your online banking portal, or check out
+              - link "how to find your bank details from a paper check" [ref=f4e52] [cursor=pointer]:
+                - /url: /app/link-bank-account#check-details
+              - text: .
+          - generic [ref=f4e54]:
+            - generic [ref=f4e55]: Confirm Account Number *
+            - textbox "Confirm Account Number" [ref=f4e56]
+            - generic [ref=f4e57]: Please retype your Account Number to confirm.
+          - group "Account Type" [ref=f4e59]:
+            - generic [ref=f4e61]:
+              - generic [ref=f4e62]:
+                - radio "Checking" [checked] [ref=f4e63]
+                - generic [ref=f4e64]: Checking
+              - generic [ref=f4e65]:
+                - radio "Savings" [ref=f4e66]
+                - generic [ref=f4e67]: Savings
+            - text: Choose which type of account this is. If you're not sure, use Checking.
+          - paragraph [ref=f4e68]: First, you send us your information. Then a Member Experience specialist will contact you to confirm the account.
+          - generic [ref=f4e70]:
+            - button "Back" [ref=f4e71] [cursor=pointer]
+            - button "Continue" [ref=f4e72] [cursor=pointer]

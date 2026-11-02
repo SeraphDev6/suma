@@ -1,0 +1,54 @@
+- generic [ref=f13e3]:
+  - link "Saltar al contenido principal" [ref=f13e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f13e5]:
+    - navigation "Menú principal" [ref=f13e7]:
+      - generic [ref=f13e8]:
+        - link "Suma, Inicio" [ref=f13e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Logo de suma que muestra una mazorca de maíz encima de una moneda, todo dentro de un círculo y sombreado en dorado." [ref=f13e10]
+          - paragraph [ref=f13e11]: Suma
+        - status [aria-hidden] [ref=f13e12]:
+          - generic [aria-hidden] [ref=f13e13]: 
+          - generic [ref=f13e14]: Estás sin conexión
+        - button "Abrir menú" [ref=f13e15] [cursor=pointer]
+      - text:                 
+    - main [ref=f13e19]:
+      - generic [ref=f13e22]:
+        - navigation "Ruta de navegación" [ref=f13e23]:
+          - list [ref=f13e24]:
+            - listitem [ref=f13e25]:
+              - button "Volver a la página anterior" [ref=f13e26] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f13e27]: 
+                - text: Volver
+            - listitem
+        - heading "Cuentas de pago" [level=1] [ref=f13e28]
+        - paragraph [ref=f13e29]:
+          - text: Para añadir fondos a tu cuenta, se requiere por lo menos una
+          - link "fuente de financiamiento" [ref=f13e30] [cursor=pointer]:
+            - /url: /app/glossary#glossary-funding_source
+          - text: . Por lo regular, es una cuenta bancaria, pero pueda haber otras opciones abajo.
+        - paragraph [ref=f13e31]:
+          - text: Protegemos su información financiera con
+          - strong [ref=f13e32]: cifrado de nivel bancario
+          - text: .
+          - strong [ref=f13e33]: Nunca se compartirá sin su consentimiento
+          - text: . Lea la
+          - link "Política de privacidad de Suma (se abre en una ventana nueva)" [ref=f13e34] [cursor=pointer]:
+            - /url: https://app.mysuma.org/privacy-policy
+            - text: Política de privacidad de Suma
+            - generic [ref=f13e35]: (se abre en una ventana nueva)
+          - text: para saber cómo usamos y protegemos su información financiera.
+        - generic [ref=f13e36]:
+          - heading "Cuentas Bancarias" [level=2] [ref=f13e38]
+          - generic [ref=f13e39]:
+            - paragraph [ref=f13e40]: No tienes una cuenta bancaria vinculada.
+            - button "Vincular una cuenta bancaria" [ref=f13e41] [cursor=pointer]
+        - generic [ref=f13e42]:
+          - heading "Tarjetas" [level=2] [ref=f13e44]
+          - generic [ref=f13e45]:
+            - paragraph [ref=f13e46]: No tienes ninguna tarjeta de crédito o débito vinculada.
+            - button "Agregar su tarjeta" [ref=f13e47] [cursor=pointer]
+        - generic [ref=f13e48]:
+          - heading "Otras Fuentes" [level=2] [ref=f13e50]
+          - paragraph [ref=f13e52]: Próximamente se podrá añadir fondos de fuentes adicionales, como dinero en efectivo, giro bancario o depositos por un amigo.

@@ -1,0 +1,38 @@
+- generic [ref=f1e3]:
+  - link "Skip to main content" [ref=f1e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f1e5]:
+    - navigation "Main menu" [ref=f1e7]:
+      - generic [ref=f1e8]:
+        - link "Suma, Home" [ref=f1e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f1e10]
+          - paragraph [ref=f1e11]: Suma
+        - status [aria-hidden] [ref=f1e12]:
+          - generic [aria-hidden] [ref=f1e13]: 
+          - generic [ref=f1e14]: You are offline
+        - button "Open menu" [ref=f1e15] [cursor=pointer]
+      - text:  
+    - main [ref=f1e19]:
+      - generic [ref=f1e22]:
+        - heading "Glossary" [level=1] [ref=f1e23]
+        - paragraph [ref=f1e24]: These are words you may see in suma and what they mean.
+        - generic [ref=f1e25]:
+          - term [ref=f1e26]: Funding source
+          - definition [ref=f1e27]: A bank account or card you use to add money to suma
+          - term [ref=f1e28]: Ledger
+          - definition [ref=f1e29]: A list of the money added to and spent from one of your suma balances
+          - term [ref=f1e30]: Micromobility
+          - definition [ref=f1e31]: Small vehicles you rent for short trips, such as scooters and bikes
+          - term [ref=f1e32]: Offering
+          - definition [ref=f1e33]: A set of products you can order for a limited time
+          - term [ref=f1e34]: Private account
+          - definition [ref=f1e35]: An account with a vendor that hides your phone number and email from them
+          - term [ref=f1e36]: Routing number
+          - definition [ref=f1e37]: The 9-digit number that identifies your bank
+          - term [ref=f1e38]: Subsidy
+          - definition [ref=f1e39]: Money from a partner program that lowers the price you pay
+          - term [ref=f1e40]: Unclaimed order
+          - definition [ref=f1e41]: An order you have paid for but not yet picked up
+          - term [ref=f1e42]: Vendor
+          - definition [ref=f1e43]: A business that sells goods or services through suma
