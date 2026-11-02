@@ -1,0 +1,25 @@
+{
+  "name": "suma-a11y-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Two-phase WCAG 2.2 A-AAA scanner: full-site static analysis, then diff-traced live testing by a Copilot agent.",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "static": "node static-scan.mjs",
+    "impact": "node impact.mjs",
+    "axe": "node axe-sweep.mjs",
+    "mcp-setup": "node mcp-setup.mjs",
+    "validate": "node validate-report.mjs",
+    "render": "node render-report.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "axe-core": "4.14.0",
+    "eslint": "8.57.1",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "playwright": "1.64.1"
+  }
+}

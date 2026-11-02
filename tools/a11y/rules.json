@@ -1,0 +1,347 @@
+{
+  "_comment": "Maps each static rule to WCAG 2.2 criteria. confidence 'violation' means the code fact is certain (the live test confirms user impact). 'lead' means the pattern often, but not always, causes a failure and must be confirmed live before anyone calls it a failure. Rules with no WCAG criterion are left off on purpose: this scanner only reports conformance issues.",
+  "jsxA11y": {
+    "alt-text": {
+      "sc": [
+        "1.1.1"
+      ],
+      "confidence": "violation"
+    },
+    "anchor-ambiguous-text": {
+      "sc": [
+        "2.4.9"
+      ],
+      "confidence": "lead"
+    },
+    "anchor-has-content": {
+      "sc": [
+        "2.4.4",
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "anchor-is-valid": {
+      "sc": [
+        "2.1.1",
+        "4.1.2"
+      ],
+      "confidence": "lead",
+      "options": {
+        "components": [
+          "Link",
+          "RLink"
+        ],
+        "specialLink": [
+          "to"
+        ],
+        "aspects": [
+          "noHref",
+          "invalidHref",
+          "preferButton"
+        ]
+      }
+    },
+    "aria-activedescendant-has-tabindex": {
+      "sc": [
+        "2.1.1"
+      ],
+      "confidence": "violation"
+    },
+    "aria-props": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "aria-proptypes": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "aria-role": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation",
+      "options": {
+        "ignoreNonDOM": true
+      }
+    },
+    "aria-unsupported-elements": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "autocomplete-valid": {
+      "sc": [
+        "1.3.5"
+      ],
+      "confidence": "violation"
+    },
+    "click-events-have-key-events": {
+      "sc": [
+        "2.1.1"
+      ],
+      "confidence": "lead"
+    },
+    "control-has-associated-label": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "lead",
+      "options": {
+        "ignoreElements": [
+          "audio",
+          "canvas",
+          "embed",
+          "input",
+          "textarea",
+          "tr",
+          "video"
+        ],
+        "ignoreRoles": [
+          "grid",
+          "listbox",
+          "menu",
+          "menubar",
+          "radiogroup",
+          "row",
+          "tablist",
+          "toolbar",
+          "tree",
+          "treegrid"
+        ],
+        "includeRoles": [
+          "alert",
+          "dialog"
+        ],
+        "depth": 5
+      }
+    },
+    "heading-has-content": {
+      "sc": [
+        "1.3.1",
+        "2.4.6"
+      ],
+      "confidence": "violation"
+    },
+    "html-has-lang": {
+      "sc": [
+        "3.1.1"
+      ],
+      "confidence": "violation"
+    },
+    "iframe-has-title": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "img-redundant-alt": {
+      "sc": [
+        "1.1.1"
+      ],
+      "confidence": "lead"
+    },
+    "interactive-supports-focus": {
+      "sc": [
+        "2.1.1"
+      ],
+      "confidence": "violation"
+    },
+    "label-has-associated-control": {
+      "sc": [
+        "1.3.1",
+        "3.3.2"
+      ],
+      "confidence": "lead",
+      "options": {
+        "assert": "either",
+        "depth": 3
+      }
+    },
+    "lang": {
+      "sc": [
+        "3.1.1",
+        "3.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "media-has-caption": {
+      "sc": [
+        "1.2.2"
+      ],
+      "confidence": "lead"
+    },
+    "mouse-events-have-key-events": {
+      "sc": [
+        "2.1.1",
+        "1.4.13"
+      ],
+      "confidence": "lead"
+    },
+    "no-aria-hidden-on-focusable": {
+      "sc": [
+        "4.1.2",
+        "2.4.3"
+      ],
+      "confidence": "violation"
+    },
+    "no-autofocus": {
+      "sc": [
+        "2.4.3",
+        "3.2.1"
+      ],
+      "confidence": "lead",
+      "options": {
+        "ignoreNonDOM": true
+      }
+    },
+    "no-distracting-elements": {
+      "sc": [
+        "2.2.2"
+      ],
+      "confidence": "violation"
+    },
+    "no-interactive-element-to-noninteractive-role": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "no-noninteractive-element-interactions": {
+      "sc": [
+        "2.1.1",
+        "4.1.2"
+      ],
+      "confidence": "lead"
+    },
+    "no-noninteractive-element-to-interactive-role": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "no-noninteractive-tabindex": {
+      "sc": [
+        "2.4.3"
+      ],
+      "confidence": "lead"
+    },
+    "no-static-element-interactions": {
+      "sc": [
+        "2.1.1",
+        "4.1.2"
+      ],
+      "confidence": "lead"
+    },
+    "role-has-required-aria-props": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "role-supports-aria-props": {
+      "sc": [
+        "4.1.2"
+      ],
+      "confidence": "violation"
+    },
+    "scope": {
+      "sc": [
+        "1.3.1"
+      ],
+      "confidence": "violation"
+    },
+    "tabindex-no-positive": {
+      "sc": [
+        "2.4.3"
+      ],
+      "confidence": "violation"
+    }
+  },
+  "components": {
+    "_comment": "Tell jsx-a11y which library components render which DOM element, so it can check them. Only components that pass props straight to that element belong here: react-bootstrap Dropdown.Item, Nav.Link and Navbar.Brand render an Anchor that adds role=button and keyboard handling itself, so mapping them to <a> would produce false positives.",
+    "Button": "button",
+    "Form.Control": "input",
+    "Form.Check": "input",
+    "Form.Select": "select",
+    "Form.Label": "label",
+    "FormLabel": "label",
+    "Image": "img",
+    "Link": "a",
+    "RLink": "a",
+    "SafeExternalLink": "a",
+    "ExternalLink": "a"
+  },
+  "custom": {
+    "suma/new-window-unannounced": {
+      "sc": [
+        "3.2.5"
+      ],
+      "confidence": "lead",
+      "message": "Link opens a new window (target=\"_blank\"). Confirm live that the link text or an icon with a text alternative warns about the new window."
+    },
+    "suma/outline-removed": {
+      "sc": [
+        "2.4.7",
+        "2.4.13"
+      ],
+      "confidence": "lead",
+      "message": "Focus outline is removed. Confirm live that a visible replacement indicator appears on keyboard focus."
+    },
+    "suma/motion-without-reduced-motion": {
+      "sc": [
+        "2.3.3"
+      ],
+      "confidence": "lead",
+      "message": "Animation or transition declared with no prefers-reduced-motion override in this file or a global one. Confirm live with reduced motion emulated."
+    },
+    "suma/viewport-zoom-blocked": {
+      "sc": [
+        "1.4.4"
+      ],
+      "confidence": "violation",
+      "message": "The viewport meta blocks or limits zoom (user-scalable=no or maximum-scale below 2)."
+    },
+    "suma/html-lang-missing": {
+      "sc": [
+        "3.1.1"
+      ],
+      "confidence": "violation",
+      "message": "The html element has no lang attribute."
+    },
+    "suma/orientation-locked": {
+      "sc": [
+        "1.3.4"
+      ],
+      "confidence": "violation",
+      "message": "The web app manifest locks orientation."
+    },
+    "suma/pointer-down-activation": {
+      "sc": [
+        "2.5.2"
+      ],
+      "confidence": "lead",
+      "message": "An action is bound to the down event (mousedown, pointerdown or touchstart). Confirm live whether it completes an action that cannot be aborted by moving off before release."
+    },
+    "suma/auto-dismiss-timer": {
+      "sc": [
+        "2.2.1",
+        "2.2.3"
+      ],
+      "confidence": "lead",
+      "message": "Content is dismissed on a timer. Confirm live whether the user can turn off, adjust or extend it (or it lasts at least 20 hours)."
+    },
+    "suma/untranslated-string": {
+      "sc": [
+        "3.1.2"
+      ],
+      "confidence": "lead",
+      "message": "This UI string key exists in English but is missing from a translated locale, so that page would show English text without lang markup."
+    }
+  },
+  "_precision": "Results on a self-closing element that spreads props ({...rest}) are dropped for content rules (anchor-has-content, heading-has-content, control-has-associated-label), because the children arrive through the spread; the call sites are checked instead."
+}

@@ -1,0 +1,234 @@
+name: Accessibility phase 2 (traced impact)
+
+# 1. Trace the diff to the pages it can affect (tools/a11y/impact.mjs).
+# 2. Start Suma with a bootstrapped database, run axe-core on those pages (leads + screenshots).
+# 3. A Copilot CLI agent (.github/agents/a11y-tester.agent.md) drives Playwright MCP to confirm or
+#    dismiss each lead and test interactions, then writes a11y-report/report.json.
+# 4. The validator drops any claimed failure without evidence; the publish job comments on the PR.
+#
+# Setup:
+#   - Copilot CLI auth: either enable "Allow use of Copilot CLI billed to the organization" for the
+#     org (then github.token with copilot-requests: write is enough), or add a fine-grained PAT with
+#     the "Copilot Requests" permission as the secret COPILOT_GITHUB_TOKEN.
+#   - Optional repository variables:
+#       A11Y_AGENT_MODEL     model for the agent (default: Copilot's default)
+#       A11Y_FAIL_LEVEL      fail the check on confirmed failures introduced by the PR at this
+#                            level or stricter: A, AA (default) or AAA; "none" to report only
+#       A11Y_EVIDENCE_BRANCH branch to publish screenshots to so they show inline in the comment
+#                            (default a11y-evidence; set to "off" to only attach the artifact)
+#
+# Pull requests from forks are skipped: they get no secrets and must not run an agent with tools.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "webapp/**"
+      - "data/i18n/**"
+      - "tools/a11y/**"
+      - ".github/agents/a11y-tester.agent.md"
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Base ref to diff against
+        default: origin/main
+
+concurrency:
+  group: a11y-impact-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      copilot-requests: write
+    env:
+      A11Y_REPORT_DIR: a11y-report
+    outputs:
+      routes: ${{ steps.impact.outputs.routes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # The agent has a shell; it must not find a token in .git/config.
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install the scanner
+        working-directory: tools/a11y
+        run: npm ci --no-audit --no-fund
+
+      - name: Phase 1 static scan (input for lead tracing)
+        run: node tools/a11y/static-scan.mjs --fail-on none
+
+      - name: Trace the diff to affected pages
+        id: impact
+        env:
+          BASE: ${{ inputs.base || format('origin/{0}', github.base_ref) }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          node tools/a11y/impact.mjs --base "$BASE" --head "$HEAD_SHA"
+          echo "routes=$(node -e 'const i=require("./a11y-report/impact.json");console.log(Object.values(i.apps).reduce((n,a)=>n+a.routes.length,0))')" >> "$GITHUB_OUTPUT"
+
+      - name: Start Suma
+        if: steps.impact.outputs.routes != '0'
+        uses: ./.github/actions/suma-a11y-env
+
+      - name: axe-core sweep of the affected pages
+        if: steps.impact.outputs.routes != '0'
+        run: node tools/a11y/axe-sweep.mjs
+
+      - name: Install Copilot CLI
+        if: steps.impact.outputs.routes != '0'
+        run: npm install -g @github/copilot@1.0.98
+
+      - name: Copilot agent tests the pages
+        if: steps.impact.outputs.routes != '0'
+        id: agent
+        continue-on-error: true
+        timeout-minutes: 45
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || github.token }}
+          MODEL: ${{ vars.A11Y_AGENT_MODEL }}
+        run: |
+          PROMPT="Test the accessibility impact of this pull request. The inputs are in a11y-report/ (impact.json, axe.json, static.json); the app is running at http://localhost:22001. Follow your instructions exactly, write a11y-report/report.json, and finish only when 'node tools/a11y/validate-report.mjs' exits 0."
+          copilot -p "$PROMPT" \
+            --agent a11y-tester \
+            ${MODEL:+--model "$MODEL"} \
+            --additional-mcp-config @a11y-report/.mcp/mcp-config.json \
+            --disable-builtin-mcps \
+            --allow-all-tools \
+            --deny-tool 'shell(git push)' \
+            --deny-tool 'shell(git commit)' \
+            --deny-tool 'shell(gh:*)' \
+            --no-ask-user \
+            --no-auto-update \
+            --log-dir a11y-report/logs \
+            --share a11y-report/agent-session.md
+
+      - name: Validate the agent's report
+        if: steps.impact.outputs.routes != '0'
+        run: |
+          if [ ! -f a11y-report/report.json ]; then
+            echo '{"summary":"The agent did not produce a report.","routes":[],"findings":[],"passes":[],"notApplicable":[],"needsHuman":[],"dismissedLeads":[]}' > a11y-report/report.json
+          fi
+          node tools/a11y/validate-report.mjs --report-only
+
+      - name: Keep the report, screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-impact
+          include-hidden-files: false
+          path: |
+            a11y-report/
+            !a11y-report/.auth/
+            !a11y-report/.mcp/init.js
+
+  publish:
+    needs: test
+    if: always() && needs.test.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+    env:
+      A11Y_REPORT_DIR: a11y-report
+      EVIDENCE_BRANCH: ${{ vars.A11Y_EVIDENCE_BRANCH || 'a11y-evidence' }}
+      PR: ${{ github.event.pull_request.number }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/a11y
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: a11y-impact
+          path: a11y-report
+
+      - name: Nothing to test
+        if: needs.test.outputs.routes == '0'
+        run: |
+          {
+            echo "<!-- suma-a11y-impact-report -->"
+            echo "## Accessibility phase 2: live test of the changed pages"
+            echo ""
+            echo "No member app pages are affected by this diff, so nothing was tested in the browser."
+          } > a11y-report/comment.md
+
+      - name: Publish screenshots for inline display
+        id: evidence
+        if: needs.test.outputs.routes != '0' && env.EVIDENCE_BRANCH != 'off' && hashFiles('a11y-report/validated.json') != ''
+        run: |
+          dir="pr-${PR:-manual}/${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$EVIDENCE_BRANCH" >/dev/null; then
+            git fetch --depth 1 origin "$EVIDENCE_BRANCH"
+            git worktree add /tmp/evidence "origin/$EVIDENCE_BRANCH"
+            git -C /tmp/evidence sparse-checkout disable
+            git -C /tmp/evidence checkout -B "$EVIDENCE_BRANCH"
+          else
+            git worktree add --detach /tmp/evidence
+            git -C /tmp/evidence sparse-checkout disable
+            git -C /tmp/evidence checkout --orphan "$EVIDENCE_BRANCH"
+            git -C /tmp/evidence rm -rfq .
+          fi
+          mkdir -p "/tmp/evidence/$dir"
+          cp -R a11y-report/screenshots "/tmp/evidence/$dir/"
+          git -C /tmp/evidence add "$dir"
+          git -C /tmp/evidence commit -qm "Accessibility screenshots for ${dir}"
+          git -C /tmp/evidence push -q origin "$EVIDENCE_BRANCH"
+          echo "base=https://github.com/${GITHUB_REPOSITORY}/raw/${EVIDENCE_BRANCH}/${dir}" >> "$GITHUB_OUTPUT"
+
+      - name: Render the comment
+        if: needs.test.outputs.routes != '0' && hashFiles('a11y-report/validated.json') != ''
+        run: |
+          node tools/a11y/render-report.mjs \
+            ${{ steps.evidence.outputs.base && format('--image-base {0}', steps.evidence.outputs.base) || '' }} \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --artifact-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}#artifacts"
+          cat a11y-report/comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on the pull request
+        if: env.PR != '' && hashFiles('a11y-report/comment.md') != ''
+        run: |
+          existing=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
+            --jq '.[] | select(.body | startswith("<!-- suma-a11y-impact-report -->")) | .id' | head -1)
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -F body=@a11y-report/comment.md >/dev/null
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -F body=@a11y-report/comment.md >/dev/null
+          fi
+
+      - name: Fail on failures this PR introduces
+        if: needs.test.outputs.routes != '0'
+        env:
+          FAIL_LEVEL: ${{ vars.A11Y_FAIL_LEVEL || 'AA' }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = "a11y-report/validated.json";
+            if (!fs.existsSync(p)) { console.log("::error::No validated report; see the test job."); process.exit(1); }
+            const v = JSON.parse(fs.readFileSync(p, "utf8"));
+            const lvl = process.env.FAIL_LEVEL;
+            if (lvl === "none") process.exit(0);
+            const order = { A: 0, AA: 1, AAA: 2 };
+            const bad = v.findings.filter((f) => f.introducedByDiff === "yes" && order[f.level] <= order[lvl]);
+            if (v.validation.errors.length) console.log(`::warning::The agent report had ${v.validation.errors.length} validation problems; coverage is incomplete.`);
+            for (const f of bad) console.log(`::error::${f.id} WCAG ${f.sc.join(", ")} (${f.level}) on ${f.route}: ${f.title}`);
+            process.exit(bad.length ? 1 : 0);
+          '

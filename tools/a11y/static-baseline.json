@@ -1,0 +1,15 @@
+{
+  "updatedAt": "2026-11-02T15:49:36.512Z",
+  "note": "Accepted static findings. Regenerate with: npm run static -- --update-baseline",
+  "fingerprints": [
+    "14d420eb237767a2",
+    "ea1d5d7f6c828ee1",
+    "9eb44deb6e47117e",
+    "f06bc85ff66047f3",
+    "53e4b6ad68a1845f",
+    "4910b5cbeb726b3c",
+    "a6f176d2fd62397a",
+    "3f9072cf58c5ecec",
+    "cad41522ddcef80f"
+  ]
+}

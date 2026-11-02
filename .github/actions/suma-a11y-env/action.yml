@@ -1,0 +1,85 @@
+name: Start Suma for accessibility testing
+description: >
+  Starts Postgres and Redis, migrates and bootstraps a fresh development database, builds the
+  member app, starts the backend on http://localhost:22001 serving /app, installs the
+  scanner, and prepares the signed-in browser sessions and Playwright MCP config in a11y-report/.
+  Used by the a11y-impact workflow and by copilot-setup-steps.yml.
+
+inputs:
+  report-dir:
+    description: Where scanner outputs go (relative to the workspace).
+    default: a11y-report
+
+runs:
+  using: composite
+  steps:
+    - name: Install system packages
+      shell: bash
+      run: |
+        sudo apt-get update -yqq -o Acquire::Retries=3
+        sudo apt-get install --fix-missing -yqq -o Acquire::Retries=3 libvips libpq-dev
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+
+    - name: Start Postgres and Redis
+      shell: bash
+      run: |
+        docker compose up -d db sidekiq_redis
+        for i in $(seq 1 60); do
+          docker compose exec -T db pg_isready -U suma -d suma >/dev/null 2>&1 && break
+          sleep 2
+        done
+        docker compose exec -T db pg_isready -U suma -d suma
+
+    - name: Build the member app
+      shell: bash
+      env:
+        VITE_API_HOST: /
+        VITE_FEATURE_MOBILITY: "true"
+      run: |
+        (cd webapp && npm ci --no-audit --no-fund && npm run build)
+        # The admin app is out of scope, but the backend reads build-adminapp/index.html at boot.
+        mkdir -p build-adminapp
+        [ -f build-adminapp/index.html ] || printf "<!doctype html><html><head><title>Admin app not built</title></head><body></body></html>\n" > build-adminapp/index.html
+
+    - name: Migrate, bootstrap and start the backend
+      shell: bash
+      env:
+        RACK_ENV: development
+        # Bootstrap would otherwise spawn Python to embed search vectors; not needed for UI tests.
+        HYBRID_SEARCH_EMBEDDING_GENERATOR: ""
+        WEB_CONCURRENCY: "0"
+        VITE_FEATURE_MOBILITY: "true"
+      run: |
+        mkdir -p "${{ inputs.report-dir }}"
+        bundle exec rake db:migrate
+        bundle exec rake bootstrap
+        nohup bundle exec puma -C config/puma.rb > "${{ inputs.report-dir }}/server.log" 2>&1 &
+        for i in $(seq 1 90); do
+          if curl -fsS http://localhost:22001/api/healthz >/dev/null 2>&1 && curl -fsS http://localhost:22001/app/ >/dev/null 2>&1; then
+            echo "Backend is up"; exit 0
+          fi
+          sleep 2
+        done
+        echo "Backend did not start"; tail -100 "${{ inputs.report-dir }}/server.log"; exit 1
+
+    - name: Install the scanner and its browser
+      shell: bash
+      working-directory: tools/a11y
+      run: |
+        npm ci --no-audit --no-fund
+        npx playwright install --with-deps chromium
+
+    - name: Prepare signed-in sessions and the Playwright MCP config
+      shell: bash
+      env:
+        A11Y_REPORT_DIR: ${{ inputs.report-dir }}
+      run: node tools/a11y/mcp-setup.mjs

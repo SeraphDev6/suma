@@ -1,0 +1,117 @@
+{
+  "reportDir": "a11y-report",
+  "baseUrl": "http://localhost:22001",
+  "apps": {
+    "webapp": {
+      "label": "Member app",
+      "srcDir": "webapp/src",
+      "routesFile": "webapp/src/App.jsx",
+      "entryFiles": [
+        "webapp/src/index.jsx",
+        "webapp/src/App.jsx"
+      ],
+      "htmlFiles": [
+        "webapp/index.html"
+      ],
+      "manifest": "webapp/public/manifest.json",
+      "mountPath": "/app",
+      "auth": "member",
+      "skipRoutes": [
+        "/*",
+        "/styleguide",
+        "/privacy-policy-content",
+        "/error"
+      ],
+      "paramRouteHints": {
+        "/food/:id": "Open /food and choose the first offering.",
+        "/product/:offeringId/:productId": "Open /food, choose an offering, then choose the first product.",
+        "/cart/:id": "Open an offering from /food, add a product, then open the cart.",
+        "/checkout/:id": "From a cart with an item, press the checkout button. Do NOT place the order.",
+        "/checkout/:id/confirmation": "Only reachable by placing an order. Mark as needs_human unless the diff changes it and an order already exists in /order-history.",
+        "/order/:id": "Open /order-history and choose the first order, if any.",
+        "/private-account/:id": "Open /private-accounts and choose the first account, if any.",
+        "/trip/:id": "Open /trips and choose the first trip, if any."
+      },
+      "globalSample": [
+        "/",
+        "/start",
+        "/dashboard",
+        "/food",
+        "/funding",
+        "/preferences",
+        "/sitemap"
+      ]
+    }
+  },
+  "i18n": {
+    "seedDir": "data/i18n/seeds",
+    "primaryLocale": "en",
+    "locales": [
+      "en",
+      "es"
+    ],
+    "files": [
+      "strings.json"
+    ]
+  },
+  "logins": {
+    "member": {
+      "phone": "15552223333",
+      "note": "Bootstrap admin member, onboarded; phone matches MEMBER_SKIP_VERIFICATION_ALLOWLIST so any code works."
+    }
+  },
+  "impact": {
+    "maxRoutesPerApp": 15,
+    "globalPatterns": [
+      "^webapp/src/assets/styles/",
+      "^webapp/index\\.html$",
+      "^webapp/src/index\\.jsx$"
+    ],
+    "ignorePatterns": [
+      "\\.test\\.jsx?$",
+      "\\.spec\\.jsx?$",
+      "^webapp/src/pages/Styleguide"
+    ]
+  },
+  "staticIgnore": [
+    "^webapp/src/pages/Styleguide\\.jsx$",
+    "\\.test\\.jsx?$"
+  ],
+  "agentChecklist": [
+    "1.1.1",
+    "1.3.1",
+    "1.4.1",
+    "2.1.1",
+    "2.1.2",
+    "2.4.2",
+    "2.4.3",
+    "2.4.4",
+    "2.5.3",
+    "3.1.1",
+    "3.3.1",
+    "3.3.2",
+    "4.1.2",
+    "1.3.5",
+    "1.4.3",
+    "1.4.4",
+    "1.4.10",
+    "1.4.11",
+    "1.4.12",
+    "1.4.13",
+    "2.4.6",
+    "2.4.7",
+    "2.4.11",
+    "2.5.8",
+    "3.1.2",
+    "4.1.3",
+    "1.4.6",
+    "2.3.3",
+    "2.4.9",
+    "2.4.10",
+    "2.4.12",
+    "2.4.13",
+    "2.5.5",
+    "3.2.5"
+  ],
+  "_agentChecklist": "Criteria every tested route must have an outcome for (finding, pass, notApplicable or needsHuman). The agent may test others too."
+}
