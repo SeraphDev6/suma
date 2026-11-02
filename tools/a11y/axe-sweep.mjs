@@ -31,7 +31,7 @@ export function tagToSc(tag) {
 
 const slug = (s) => s.replace(/^\//, "").replace(/[^\w-]+/g, "_") || "root";
 
-async function settle(page) {
+export async function settle(page) {
   await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
   // Suma shows a screen loader while strings and the user load.
   await page.waitForFunction(() => !document.querySelector(".screen-loader-show"), null, { timeout: 10000 }).catch(() => {});

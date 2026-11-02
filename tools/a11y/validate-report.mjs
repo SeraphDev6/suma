@@ -26,6 +26,8 @@ const config = loadConfig();
 const out = reportDir(config);
 
 /** Criterion-specific proof: return an error string when the measurement does not show a failure. */
+export const RECHECK_SC = ["1.4.3", "1.4.6", "1.4.11", "2.5.8", "2.5.5", "2.4.11", "2.4.12", "1.4.10", "1.4.12"];
+
 export const MEASURED = {
   "1.4.3": (m) => (m?.indeterminate ? "contrast is indeterminate (image or opacity behind text); move to needsHuman" : typeof m?.ratio !== "number" ? "needs contrast() output with ratio" : !(m.ratio < (m.required?.["1.4.3"] ?? (m.large ? 3 : 4.5))) ? `ratio ${m.ratio} meets the 1.4.3 threshold` : null),
   "1.4.6": (m) => (m?.indeterminate ? "contrast is indeterminate; move to needsHuman" : typeof m?.ratio !== "number" ? "needs contrast() output with ratio" : !(m.ratio < (m.required?.["1.4.6"] ?? (m.large ? 4.5 : 7))) ? `ratio ${m.ratio} meets the 1.4.6 threshold` : null),
@@ -50,7 +52,7 @@ function imageOk(p) {
   return null;
 }
 
-export function validate(report, { impact, axe, catalog, checklist }) {
+export function validate(report, { impact, axe, catalog, checklist, recheck = null }) {
   const errors = [];
   const warnings = [];
   const accepted = [];
@@ -60,7 +62,18 @@ export function validate(report, { impact, axe, catalog, checklist }) {
 
   for (const f of report.findings || []) {
     const problems = [];
-    const sc = [...new Set(f.sc || [])];
+    let sc = [...new Set(f.sc || [])];
+    // Independent re-measurement (recheck.mjs): drop criteria whose failure did not reproduce.
+    const rc = recheck ? recheck.filter((r) => r.id === f.id) : [];
+    const refuted = rc.filter((r) => r.status === "refuted");
+    if (refuted.length) {
+      sc = sc.filter((s) => !refuted.some((r) => r.sc === s));
+      if (!sc.length) problems.push(...refuted.map((r) => `independent re-measurement of ${r.sc} shows a pass: ${r.detail}`));
+      else warnings.push(`${f.id}: dropped ${refuted.map((r) => r.sc).join(", ")}; the independent re-measurement shows a pass`);
+    }
+    if (f.state && sc.some((s) => RECHECK_SC.includes(s)) && !(Array.isArray(f.replay) && f.replay.length)) {
+      problems.push(`the finding is in state "${f.state}" but has no replay steps, so it cannot be re-measured independently; add replay`);
+    }
     for (const s of sc) {
       if (obsolete[s]) problems.push(`${s} is obsolete in WCAG 2.2`);
       else if (!isSc(s)) problems.push(`${s} is not a WCAG 2.2 success criterion`);
@@ -85,7 +98,7 @@ export function validate(report, { impact, axe, catalog, checklist }) {
     const levels = valid.map((s) => catalog.criteria[s].level);
     const level = ["A", "AA", "AAA"].find((l) => levels.includes(l));
     if (f.level && level && f.level !== level) warnings.push(`${f.id}: level corrected from ${f.level} to ${level}`);
-    const normalized = { ...f, sc: valid, level, criteria: valid.map((s) => criterion(s)) };
+    const normalized = { ...f, sc: valid, level, criteria: valid.map((s) => criterion(s)), ...(rc.length ? { recheck: rc.map(({ sc: s, status, detail }) => ({ sc: s, status, detail })) } : {}) };
     if (problems.length) rejected.push({ ...normalized, rejectedBecause: problems });
     else accepted.push(normalized);
   }
@@ -183,7 +196,8 @@ function main() {
   const load = (f) => (fs.existsSync(path.join(out, f)) ? readJson(path.join(out, f)) : null);
   const impact = load("impact.json");
   const axe = load("axe.json");
-  const res = validate(report, { impact, axe, catalog: loadCatalog(), checklist: config.agentChecklist });
+  const recheck = load("recheck.json")?.results || null;
+  const res = validate(report, { impact, axe, catalog: loadCatalog(), checklist: config.agentChecklist, recheck });
   let session;
   if (args.session) {
     // The workflow passes the transcript after the agent finishes; the agent's own runs skip this.

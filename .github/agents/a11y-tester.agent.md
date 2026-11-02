@@ -127,6 +127,12 @@ Every finding needs at least one screenshot that shows the problem to someone wh
 
 Captions say what the screenshot shows ("Focus on the Delete button is hidden under the sticky header at 1280 x 800"). Do not draw on screenshots used to show colour contrast in a way that changes the colours being judged; use an element screenshot without the overlay for those.
 
+## Replay steps for measured findings
+
+After you finish, the workflow re-measures every finding on 1.4.3, 1.4.6, 1.4.11, 1.4.10, 1.4.12, 2.4.11, 2.4.12, 2.5.5 and 2.5.8 in a fresh browser, with the same probe, and drops it if the failure does not reproduce. It loads the finding's `url` with the right session and `locale`, then runs the finding's `replay` steps, so give `replay` whenever the failure is not visible on a fresh page load (a menu or dialog open, a hover, an error shown, a scrolled position, a narrow viewport). A measured finding with a `state` and no `replay` is rejected.
+
+Each step is one of: `{ "action": "click", "target": "<css selector>" }`, `{ "action": "hover", "target": "..." }`, `{ "action": "press", "key": "Tab" }`, `{ "action": "fill", "target": "...", "value": "..." }`, `{ "action": "resize", "width": 320, "height": 640 }`, `{ "action": "scroll", "y": 400 }`, `{ "action": "reducedMotion" }`. For example, a contrast failure inside the open main menu: `"replay": [{ "action": "click", "target": "button.navbar-toggler" }]`. The `element.selector` must match the element on its own (`document.querySelector`), so prefer an id or a distinctive class. For 2.4.11 and 2.4.12 the workflow Tabs to the element itself; do not add the Tab presses.
+
 ## Severity
 
 - `critical`: blocks a task for some users (cannot reach or operate a control by keyboard, no name on the only way to proceed, keyboard trap).

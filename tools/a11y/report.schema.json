@@ -213,6 +213,48 @@
           },
           "suggestedFix": {
             "type": "string"
+          },
+          "replay": {
+            "type": "array",
+            "description": "Steps that reach the finding's state from a fresh page load, so the workflow can re-measure it independently. Required when `state` is set and the finding cites a measured criterion.",
+            "items": {
+              "type": "object",
+              "required": [
+                "action"
+              ],
+              "properties": {
+                "action": {
+                  "enum": [
+                    "click",
+                    "hover",
+                    "press",
+                    "fill",
+                    "resize",
+                    "scroll",
+                    "reducedMotion"
+                  ]
+                },
+                "target": {
+                  "type": "string",
+                  "description": "CSS selector (click, hover, fill)"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "width": {
+                  "type": "number"
+                },
+                "height": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              }
+            }
           }
         }
       }

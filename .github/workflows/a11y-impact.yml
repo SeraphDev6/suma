@@ -172,6 +172,14 @@ jobs:
             --log-dir a11y-report/logs \
             --share a11y-report/agent-session.md
 
+      - name: Re-measure the findings independently
+        if: steps.impact.outputs.routes != '0'
+        continue-on-error: true
+        run: |
+          # Written only here, after the agent has finished; never trust a copy the agent left behind.
+          rm -f a11y-report/recheck.json
+          node tools/a11y/recheck.mjs
+
       - name: Validate the agent's report
         if: steps.impact.outputs.routes != '0'
         run: |

@@ -213,3 +213,31 @@ test("procedural needsHuman entries need a blocker", () => {
   assert.doesNotMatch(errs, /3\.1\.5/);
   assert.match(errs, /"downgraded" is set by the validator only/);
 });
+
+test("independent re-measurement drops refuted criteria and measured findings need replay for states", () => {
+  const out = reportDir();
+  fs.mkdirSync(path.join(out, "screenshots"), { recursive: true });
+  const shot = `screenshots/rc-${process.pid}.png`;
+  fs.writeFileSync(path.join(out, shot), Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(4000)]));
+  try {
+    const base = { app: "webapp", route: "/sitemap", url: "http://x/app/sitemap", element: { selector: "#s" }, steps: ["open"], expected: "e", actual: "a", severity: "medium", why: "People with low vision cannot see where this switch is because its border is too faint.", screenshots: [{ path: shot, caption: "c" }] };
+    const nt = { property: "borderTopColor", verdict: "fail", ratioOutside: 2.2 };
+    const report = { routes: [{ app: "webapp", path: "/sitemap", status: "tested" }], passes: [], notApplicable: [], needsHuman: [], dismissedLeads: [], findings: [
+      { ...base, id: "F-001", sc: ["1.4.11"], title: "Faint switch", measurement: nt, state: "menu open", replay: [{ action: "click", target: ".toggler" }] },
+      { ...base, id: "F-002", sc: ["1.4.11", "4.1.2"], title: "Faint and unnamed", measurement: nt },
+      { ...base, id: "F-003", sc: ["1.4.11"], title: "No replay", measurement: nt, state: "menu open" },
+      { ...base, id: "F-004", sc: ["4.1.2"], title: "Unnamed in open menu", state: "menu open", element: { selector: "#other" } },
+    ] };
+    const recheck = [
+      { id: "F-001", sc: "1.4.11", status: "refuted", detail: "verdict is pass" },
+      { id: "F-002", sc: "1.4.11", status: "refuted", detail: "verdict is pass" },
+    ];
+    const res = validate(report, { impact: null, axe: null, catalog: loadCatalog(), checklist: [], recheck });
+    assert.deepEqual(res.findings.map((f) => [f.id, f.sc]), [["F-002", ["4.1.2"]], ["F-004", ["4.1.2"]]]);
+    assert.match(res.rejected.find((f) => f.id === "F-001").rejectedBecause.join(), /re-measurement of 1\.4\.11 shows a pass/);
+    assert.match(res.rejected.find((f) => f.id === "F-003").rejectedBecause.join(), /no replay steps/);
+    assert.equal(res.findings[0].recheck[0].status, "refuted");
+  } finally {
+    fs.rmSync(path.join(out, shot), { force: true });
+  }
+});

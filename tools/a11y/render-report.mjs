@@ -87,6 +87,10 @@ function markdown() {
     lines.push(`**Expected:** ${f.expected}`, "", `**Actual:** ${f.actual}`, "");
     const m = measurementLine(f);
     if (m) lines.push(`**Measurement:** ${m}`, "");
+    if (f.recheck?.length) {
+      const say = { confirmed: "confirmed", skipped: "not re-measured" };
+      lines.push(`**Re-measured independently:** ${f.recheck.map((r) => `${r.sc} ${say[r.status] || r.status}${r.status === "skipped" && r.detail ? ` (${mdEscape(r.detail)})` : ""}`).join("; ")}`, "");
+    }
     for (const s of f.screenshots) lines.push(image(s.path, s.caption), `<sub>${s.caption}</sub>`, "");
     if (f.suggestedFix) lines.push(`<details><summary>Suggested fix</summary>\n\n${f.suggestedFix}\n\n</details>`, "");
   }
@@ -109,7 +113,24 @@ function markdown() {
     if (!list?.length) return;
     lines.push(`<details><summary>${title} (${list.length})</summary>`, "", ...list.map(row), "", "</details>", "");
   };
-  section("Needs a human", v.needsHuman, (n) => `- ${scLink(n.sc)} on ${routesOf(n).map((r) => `\`${r}\``).join(" ")}${n.downgraded ? " (**not verified**)" : n.blocker ? ` (${n.blocker})` : ""}: ${mdEscape(n.reason)}`);
+  // One line per page and reason: unreachable pages otherwise repeat the same reason for every criterion.
+  const groups = new Map();
+  for (const n of v.needsHuman || []) {
+    const key = [routesOf(n).join(" "), n.downgraded ? "unverified" : n.blocker || "", n.reason].join("|");
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(n);
+  }
+  const tag = (n) => (n.downgraded ? " (**not verified**)" : n.blocker ? ` (${n.blocker})` : "");
+  if (groups.size) {
+    lines.push(`<details><summary>Needs a human (${(v.needsHuman || []).length} across ${groups.size} items)</summary>`, "");
+    for (const list of groups.values()) {
+      const n = list[0];
+      const where = routesOf(n).map((r) => `\`${r}\``).join(" ");
+      if (list.length === 1) lines.push(`- ${scLink(n.sc)} on ${where}${tag(n)}: ${mdEscape(n.reason)}`);
+      else lines.push(`- ${where}${tag(n)}, ${list.length} criteria (${list.map((x) => x.sc).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).join(", ")}): ${mdEscape(n.reason)}`);
+    }
+    lines.push("", "</details>", "");
+  }
   section("Not applicable", v.notApplicable, (n) => `- ${scLink(n.sc)} on ${routesOf(n).map((r) => `\`${r}\``).join(" ")}: ${mdEscape(n.reason)}`);
   section("Automated leads dismissed after live testing", v.dismissedLeads, (d) => `- ${d.leadId}: ${mdEscape(d.reason)} Evidence: ${mdEscape(d.evidence)}`);
   section("Claims rejected by the validator (not reported as failures)", v.rejected, (r) => `- ${r.id} ${mdEscape(r.title)} (${(r.sc || []).join(", ")}): ${mdEscape(r.rejectedBecause.join("; "))}`);
