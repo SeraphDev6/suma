@@ -9,6 +9,8 @@ import { parseImports, resolveImport } from "../lib/graph.mjs";
 import { parseImportBindings, parseRoutes } from "../lib/routes.mjs";
 import { checkSession, enforceCoverage, enforceKeyboardCoverage, keyPressesByPath, pageEvidence } from "../lib/session.mjs";
 import { previewBody } from "../preview.mjs";
+import { previousLeads } from "../carry.mjs";
+import { findingsMarker } from "../lib/comment.mjs";
 import { spreadsChildren } from "../static-scan.mjs";
 import { MEASURED, validate } from "../validate-report.mjs";
 
@@ -191,7 +193,7 @@ test("resize, motion, spacing and snapshots are tracked per page and back passes
     blk("playwright", "browser_navigate", `"url": "http://localhost:22001/app/trips"`, "http://localhost:22001/app/trips"),
   ].join("\n");
   const ev = pageEvidence(log);
-  assert.deepEqual(ev["/funding"], { tabs: 0, snapshots: 1, widths: [1280, 320], reducedMotion: true, textSpacing: true });
+  assert.deepEqual(ev["/funding"], { tabs: 0, snapshots: 1, widths: [1280, 320], reducedMotion: true, textSpacing: true, tabStops: null });
   assert.deepEqual(ev["/trips"].widths, [320], "the viewport carries over to the next page");
   assert.equal(ev["/trips"].snapshots, 0);
   const pass = (sc) => ({ sc, app: "webapp", route: ["/funding", "/trips"], method: "m", evidence: "e" });
@@ -240,4 +242,32 @@ test("independent re-measurement drops refuted criteria and measured findings ne
   } finally {
     fs.rmSync(path.join(out, shot), { force: true });
   }
+});
+
+test("confirmed findings carry into the next run as leads that need proof to dismiss", () => {
+  const body = ["<!-- suma-a11y-impact-report -->", findingsMarker([{ id: "F-001", sc: ["4.1.2"], level: "A", app: "webapp", route: "/sitemap", url: "http://x/app/sitemap", title: "Menu state", actual: "no aria-expanded", element: { selector: "button.navbar-toggler" }, replay: [{ action: "click", target: "button.navbar-toggler" }] }], "abc123456789"), "text"].join("\n");
+  const prev = previousLeads(body);
+  assert.equal(prev.fromSha, "abc123456789");
+  assert.deepEqual(prev.leads.map((l) => [l.id, l.previousId, l.sc[0], l.target[0]]), [["PREV-001", "F-001", "4.1.2", "button.navbar-toggler"]]);
+  assert.equal(previousLeads("no marker").leads.length, 0);
+
+  const base = { routes: [], findings: [], passes: [], notApplicable: [], needsHuman: [] };
+  const open = validate({ ...base, dismissedLeads: [] }, { impact: null, axe: null, catalog: loadCatalog(), checklist: [], previous: prev }).errors.join("\n");
+  assert.match(open, /PREV-001 is neither confirmed/);
+  const noShot = validate({ ...base, dismissedLeads: [{ leadId: "PREV-001", reason: "fixed", evidence: "snapshot shows expanded" }] }, { impact: null, axe: null, catalog: loadCatalog(), checklist: [], previous: prev }).errors.join("\n");
+  assert.match(noShot, /add a screenshot showing it is fixed/);
+});
+
+test("Tab stops come from the agent's own probe calls when the sweep has none", () => {
+  const log = [
+    "### `playwright-browser_navigate`\n\n```json\n{ \"url\": \"http://localhost:22001/app/cart/1\" }\n```\n</details>\n- Page URL: http://localhost:22001/app/cart/1\n",
+    "### `playwright-browser_evaluate`\n\n```json\n{ \"function\": \"() => window.__a11y.tabbables()\" }\n```\n</details>\n### Result\n{ \"count\": 12, \"elements\": [] }\n",
+    ...Array.from({ length: 12 }, () => "### `playwright-browser_press_key`\n\n```json\n{ \"key\": \"Tab\" }\n```\n"),
+  ].join("\n");
+  const ev = pageEvidence(log);
+  assert.equal(ev["/cart/1"].tabStops, 12);
+  const { moved } = enforceCoverage({ passes: [{ sc: "2.1.1", app: "webapp", route: "/cart/:id", method: "m", evidence: "e" }] }, { evidence: ev });
+  assert.equal(moved.length, 0);
+  const short = pageEvidence(log.replace("\"count\": 12", "\"count\": 20"));
+  assert.match(enforceCoverage({ passes: [{ sc: "2.1.1", app: "webapp", route: "/cart/:id" }] }, { evidence: short }).moved[0].reason, /12 Tab presses on a page with 20 Tab stops/);
 });

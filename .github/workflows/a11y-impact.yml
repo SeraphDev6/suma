@@ -98,6 +98,7 @@ jobs:
     timeout-minutes: 75
     permissions:
       contents: read
+      pull-requests: read
       copilot-requests: write
     env:
       A11Y_REPORT_DIR: a11y-report
@@ -134,6 +135,16 @@ jobs:
           echo "routes=$(node -e 'const i=require("./a11y-report/impact.json");console.log(Object.values(i.apps).reduce((n,a)=>n+a.routes.length,0))')" >> "$GITHUB_OUTPUT"
           echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
 
+      - name: Carry forward earlier findings
+        if: steps.impact.outputs.routes != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+        run: |
+          : > a11y-report/existing.md
+          if [ -n "$PR" ]; then node tools/a11y/pr-comment.mjs fetch --pr "$PR" --out a11y-report/existing.md || true; fi
+          node tools/a11y/carry.mjs --existing a11y-report/existing.md
+
       - name: Start Suma
         if: steps.impact.outputs.routes != '0'
         uses: ./.github/actions/suma-a11y-env
@@ -155,7 +166,7 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || github.token }}
           MODEL: ${{ vars.A11Y_AGENT_MODEL }}
         run: |
-          PROMPT="Test the accessibility impact of this pull request. The inputs are in a11y-report/ (impact.json, axe.json, static.json); the app is running at http://localhost:22001. Follow your instructions exactly, write a11y-report/report.json, and finish only when 'node tools/a11y/validate-report.mjs' exits 0."
+          PROMPT="Test the accessibility impact of this pull request. The inputs are in a11y-report/ (impact.json, axe.json, static.json, previous.json); the app is running at http://localhost:22001. Follow your instructions exactly, write a11y-report/report.json, and finish only when 'node tools/a11y/validate-report.mjs' exits 0."
           copilot -p "$PROMPT" \
             --agent a11y-tester \
             ${MODEL:+--model "$MODEL"} \

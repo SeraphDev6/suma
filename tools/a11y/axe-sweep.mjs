@@ -38,6 +38,72 @@ export async function settle(page) {
   await page.waitForTimeout(500);
 }
 
+/**
+ * Buttons that show or hide content must expose that state (aria-expanded) to assistive technology
+ * (4.1.2). axe does not check this, so click each candidate on a fresh load of the page and compare
+ * what is visible before and after. Content that appears or disappears without navigation or a
+ * dialog, on a button with no aria-expanded, becomes a lead the agent must resolve.
+ */
+export async function disclosureLeads(page, route, appKey, rec, nextId, seen = new Map()) {
+  const leads = [];
+  const candidates = await page.evaluate(() => window.__a11y.disclosureCandidates()).catch(() => []);
+  for (const c of candidates) {
+    // Shared page chrome (the main menu) gets one lead, listing the other pages it is on.
+    const key = `${c.selector}|${c.name}`;
+    if (seen.has(key)) {
+      const lead = seen.get(key);
+      if (lead && !lead.alsoOn.includes(route.path)) lead.alsoOn.push(route.path);
+      continue;
+    }
+    seen.set(key, null);
+    try {
+      await page.goto(route.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await settle(page);
+      const before = await page.evaluate(() => window.__a11y.visibleCount());
+      const startUrl = page.url();
+      await page.click(c.selector, { timeout: 3000 });
+      await page.waitForTimeout(600);
+      if (page.url() !== startUrl) continue;
+      const after = await page.evaluate(() => window.__a11y.visibleCount());
+      if (after.dialogs > before.dialogs) continue;
+      const delta = after.count - before.count;
+      const state = await page.evaluate((sel) => { const el = document.querySelector(sel); return el && { expanded: el.getAttribute("aria-expanded"), pressed: el.getAttribute("aria-pressed") }; }, c.selector);
+      if (!state || Math.abs(delta) < 3 || c.expanded != null || state.expanded != null || state.pressed != null) continue;
+      const id = nextId();
+      let screenshot = null;
+      try {
+        await page.evaluate(([t, label]) => window.__a11y.highlight(t, label), [c.selector, id]);
+        screenshot = `screenshots/axe/${id}-${slug(route.path)}-disclosure.png`;
+        await page.screenshot({ path: path.join(out, screenshot) });
+        await page.evaluate(() => window.__a11y.clearHighlight());
+      } catch {
+        screenshot = null;
+      }
+      leads.push({
+        id,
+        source: "disclosure-check",
+        kind: "needs-review",
+        rule: "disclosure-state",
+        help: `Clicking "${c.name || c.element}" ${delta > 0 ? "showed" : "hid"} ${Math.abs(delta)} elements, but the button has no aria-expanded before or after, so assistive technology cannot tell whether the content is open.`,
+        sc: ["4.1.2"],
+        app: appKey,
+        route: route.path,
+        url: rec.finalUrl,
+        locale: "en",
+        target: [c.selector],
+        html: c.element,
+        summary: `visible elements ${before.count} -> ${after.count}; aria-expanded ${c.expanded ?? "absent"} -> ${state.expanded ?? "absent"}`,
+        screenshot,
+        alsoOn: [],
+      });
+      seen.set(key, leads.at(-1));
+    } catch {
+      // A candidate that cannot be clicked is not evidence of anything.
+    }
+  }
+  return leads;
+}
+
 async function main() {
   const impact = readJson(path.resolve(REPO_ROOT, args.impact || path.join(out, "impact.json")));
   const initScript = path.join(out, ".mcp/init.js");
@@ -48,6 +114,8 @@ async function main() {
   const leads = [];
   const pages = [];
   let n = 0;
+  let d = 0;
+  const seenDisclosures = new Map();
   try {
     for (const [appKey, app] of Object.entries(impact.apps)) {
       for (const route of app.routes) {
@@ -113,6 +181,7 @@ async function main() {
                 }
               }
             }
+            if (locale === "en") leads.push(...(await disclosureLeads(page, route, appKey, rec, () => `DISC-${String(++d).padStart(3, "0")}`, seenDisclosures)));
           } catch (e) {
             rec.error = String(e.message || e).slice(0, 300);
           }
@@ -126,7 +195,8 @@ async function main() {
   }
   writeJson(path.join(out, "axe.json"), { generatedAt: new Date().toISOString(), tags: TAGS, pages, leads });
   const v = leads.filter((l) => l.kind === "violation").length;
-  console.log(`axe sweep: ${pages.length} page loads, ${v} violation nodes, ${leads.length - v} needs-review nodes.`);
+  const disc = leads.filter((l) => l.source === "disclosure-check").length;
+  console.log(`axe sweep: ${pages.length} page loads, ${v} violation nodes, ${leads.length - v - disc} needs-review nodes, ${disc} show/hide buttons without aria-expanded.`);
   for (const p of pages.filter((p) => p.error || p.redirected)) console.log(`  ${p.path}: ${p.error || "redirected to " + p.finalUrl}`);
 }
 

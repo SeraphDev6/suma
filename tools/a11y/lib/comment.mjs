@@ -50,3 +50,19 @@ export function upsertComment(repo, pr, body) {
   if (existing) gh(["api", "-X", "PATCH", `repos/${repo}/issues/comments/${existing.id}`, "--input", "-"], payload);
   else gh(["api", "-X", "POST", `repos/${repo}/issues/${pr}/comments`, "--input", "-"], payload);
 }
+
+/** Confirmed findings, embedded invisibly in the comment so the next run can re-test them. */
+export function findingsMarker(findings, sha) {
+  const keep = (findings || []).map((f) => ({ id: f.id, sc: f.sc, level: f.level, app: f.app, route: f.route, url: f.url, locale: f.locale, state: f.state, replay: f.replay, title: f.title, actual: f.actual, element: { selector: f.element?.selector, name: f.element?.name } }));
+  return `<!-- a11y-findings: ${Buffer.from(JSON.stringify({ sha, findings: keep })).toString("base64")} -->`;
+}
+
+export function readFindingsMarker(body) {
+  const m = /<!-- a11y-findings: ([A-Za-z0-9+/=]+) -->/.exec(body || "");
+  if (!m) return null;
+  try {
+    return JSON.parse(Buffer.from(m[1], "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}

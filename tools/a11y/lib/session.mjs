@@ -43,7 +43,7 @@ export function pageEvidence(text, mountPath = "/app") {
       return null;
     }
   };
-  const page = (path) => (pages[path] ||= { tabs: 0, snapshots: 0, widths: [], reducedMotion: false, textSpacing: false });
+  const page = (path) => (pages[path] ||= { tabs: 0, snapshots: 0, widths: [], reducedMotion: false, textSpacing: false, tabStops: null });
   const visit = (st) => {
     if (!st.path) return;
     const pg = page(st.path);
@@ -82,8 +82,15 @@ export function pageEvidence(text, mountPath = "/app") {
       if (key === "Tab" || key === "Shift+Tab") pg.tabs++;
     } else if (tool === "browser_snapshot") {
       pg.snapshots++;
-    } else if (tool === "browser_evaluate" && /textSpacing\((true)?\)/.test(block.split("</details>")[0])) {
-      pg.textSpacing = true;
+    } else if (tool === "browser_evaluate") {
+      const [argsPart, ...rest] = block.split("</details>");
+      if (/textSpacing\((true)?\)/.test(argsPart)) pg.textSpacing = true;
+      // The page's Tab stops as the agent's own tabbables() call reported them (used where the
+      // sweep has no count, e.g. pages with an id in the path).
+      if (/__a11y\.(tabbables|structure)\(\)/.test(argsPart)) {
+        const count = Number(/"(?:tabbableCount|count)":\s*(\d+)/.exec(rest.join(""))?.[1]);
+        if (Number.isFinite(count)) pg.tabStops = Math.max(pg.tabStops ?? 0, count);
+      }
     }
   }
   return pages;
@@ -140,6 +147,7 @@ export function enforceCoverage(report, { evidence, tabbables = {} }) {
       widths: hits.flatMap((e) => e.widths),
       reducedMotion: hits.some((e) => e.reducedMotion),
       textSpacing: hits.some((e) => e.textSpacing),
+      tabStops: hits.reduce((n, e) => (e.tabStops != null ? Math.max(n ?? 0, e.tabStops) : n), null),
     };
   };
   const passes = [];
@@ -153,9 +161,10 @@ export function enforceCoverage(report, { evidence, tabbables = {} }) {
     const keep = [];
     for (const r of routes) {
       const ev = merged(r);
-      if (hasEvidence(p.sc, ev, { tabbables: tabbables[r] })) keep.push(r);
+      const stops = tabbables[r] ?? ev?.tabStops ?? undefined;
+      if (hasEvidence(p.sc, ev, { tabbables: stops })) keep.push(r);
       else {
-        const detail = KEYBOARD_SC.includes(p.sc) ? ` (${ev?.tabs ?? 0} Tab presses on a page with ${tabbables[r] ?? "an unknown number of"} Tab stops)` : "";
+        const detail = KEYBOARD_SC.includes(p.sc) ? ` (${ev?.tabs ?? 0} Tab presses on a page with ${stops ?? "an unknown number of"} Tab stops)` : "";
         moved.push({ sc: p.sc, app: p.app, route: r, blocker: "unverified", downgraded: true, reason: `Recorded as a pass, but the session log does not show ${PROCEDURAL[p.sc]}${detail}. Not verified.` });
       }
     }
@@ -166,7 +175,7 @@ export function enforceCoverage(report, { evidence, tabbables = {} }) {
 
 /** Back-compat wrapper for keyboard-only coverage. */
 export function enforceKeyboardCoverage(report, { keys, tabbables }) {
-  const evidence = Object.fromEntries(Object.entries(keys).map(([p, tabs]) => [p, { tabs, snapshots: 0, widths: [], reducedMotion: false, textSpacing: false }]));
+  const evidence = Object.fromEntries(Object.entries(keys).map(([p, tabs]) => [p, { tabs, snapshots: 0, widths: [], reducedMotion: false, textSpacing: false, tabStops: null }]));
   const kb = { ...report, passes: (report.passes || []).filter((p) => KEYBOARD_SC.includes(p.sc)) };
   const res = enforceCoverage(kb, { evidence, tabbables });
   return { passes: [...res.passes, ...(report.passes || []).filter((p) => !KEYBOARD_SC.includes(p.sc))], moved: res.moved };

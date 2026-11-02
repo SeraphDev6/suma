@@ -52,7 +52,7 @@ function imageOk(p) {
   return null;
 }
 
-export function validate(report, { impact, axe, catalog, checklist, recheck = null }) {
+export function validate(report, { impact, axe, catalog, checklist, recheck = null, previous = null }) {
   const errors = [];
   const warnings = [];
   const accepted = [];
@@ -123,12 +123,14 @@ export function validate(report, { impact, axe, catalog, checklist, recheck = nu
   const resolved = new Set([...findings.flatMap((f) => f.leadIds || []), ...rejected.flatMap((f) => f.leadIds || []), ...(report.dismissedLeads || []).map((d) => d.leadId)]);
   for (const d of report.dismissedLeads || []) {
     if (!String(d.reason || "").trim() || !String(d.evidence || "").trim()) errors.push(`dismissed lead ${d.leadId} needs a reason and evidence`);
+    // A failure confirmed in an earlier run needs visual proof that it is fixed.
+    if (/^PREV-/.test(d.leadId || "") && !d.screenshot) errors.push(`dismissed lead ${d.leadId} was a confirmed failure in an earlier run; add a screenshot showing it is fixed`);
     if (d.screenshot) {
       const e = imageOk(d.screenshot);
       if (e) errors.push(`dismissed lead ${d.leadId}: ${e}`);
     }
   }
-  const requiredLeads = [...(axe?.leads || []).map((l) => l.id), ...(impact?.leads || []).filter((l) => l.onChangedLine).map((l) => l.id)];
+  const requiredLeads = [...(axe?.leads || []).map((l) => l.id), ...(impact?.leads || []).filter((l) => l.onChangedLine).map((l) => l.id), ...(previous?.leads || []).map((l) => l.id)];
   for (const id of requiredLeads) if (!resolved.has(id)) errors.push(`lead ${id} is neither confirmed (leadIds on a finding) nor dismissed`);
 
   // Every impacted route must be accounted for, and tested routes need an outcome per checklist criterion.
@@ -197,7 +199,7 @@ function main() {
   const impact = load("impact.json");
   const axe = load("axe.json");
   const recheck = load("recheck.json")?.results || null;
-  const res = validate(report, { impact, axe, catalog: loadCatalog(), checklist: config.agentChecklist, recheck });
+  const res = validate(report, { impact, axe, catalog: loadCatalog(), checklist: config.agentChecklist, recheck, previous: load("previous.json") });
   let session;
   if (args.session) {
     // The workflow passes the transcript after the agent finishes; the agent's own runs skip this.

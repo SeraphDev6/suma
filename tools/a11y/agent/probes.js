@@ -303,6 +303,50 @@
     return { count: els.length, elements: els.slice(0, 60).map(describe) };
   }
 
+  /** A selector that matches exactly this element (ids where unique, otherwise nth-of-type steps). */
+  function cssPath(el) {
+    const parts = [];
+    for (let e = el; e && e.nodeType === 1 && e !== document.documentElement; e = e.parentElement) {
+      if (e.id && document.querySelectorAll(`#${CSS.escape(e.id)}`).length === 1) {
+        parts.unshift(`#${CSS.escape(e.id)}`);
+        break;
+      }
+      let i = 1;
+      for (let s = e.previousElementSibling; s; s = s.previousElementSibling) if (s.tagName === e.tagName) i++;
+      parts.unshift(`${e.tagName.toLowerCase()}:nth-of-type(${i})`);
+    }
+    return parts.join(" > ");
+  }
+
+  // Never click controls whose name suggests a lasting change.
+  const RISKY = /remove|delete|sign ?out|log ?out|cerrar sesi|pay|pagar|submit|enviar|buy|comprar|order|pedido|checkout|confirm|add|agregar|añadir|save|guardar|send|claim|reclamar|cancel|unlink|link|verify|continue|continuar|next|siguiente|back|atrás|volver/i;
+
+  /**
+   * Buttons that may show or hide content (menus, accordions, "more" toggles): visible, enabled,
+   * not submit buttons, not links, and not named like an action with lasting effects.
+   */
+  function disclosureCandidates(max = 8) {
+    const els = [...document.querySelectorAll("button, [role=button]:not(a)")].filter((el) => {
+      if (el.disabled || el.closest("[inert],[aria-hidden=true]") || !el.getClientRects().length) return false;
+      if (el.tagName === "BUTTON" && el.type === "submit" && el.form) return false;
+      const name = accessibleNameGuess(el) || el.textContent || "";
+      if (RISKY.test(name)) return false;
+      const hint = `${el.className} ${el.getAttribute("aria-controls") || ""} ${el.getAttribute("data-bs-toggle") || ""} ${name}`;
+      return el.hasAttribute("aria-controls") || el.hasAttribute("aria-expanded") || /toggle|toggler|collapse|accordion|expand|disclos|menu|more|show|details|options|filter|men[uú]|más|mostrar|detalles/i.test(hint);
+    });
+    return els.slice(0, max).map((el) => ({ selector: cssPath(el), element: describe(el), name: accessibleNameGuess(el), expanded: el.getAttribute("aria-expanded"), haspopup: el.getAttribute("aria-haspopup") }));
+  }
+
+  /** Visible elements on the page (for detecting content a click showed or hid). */
+  function visibleCount() {
+    let n = 0;
+    for (const el of document.body.querySelectorAll("*")) {
+      if (el.closest("#__a11y_overlay")) continue;
+      if (el.getClientRects().length && getComputedStyle(el).visibility !== "hidden") n++;
+    }
+    return { count: n, dialogs: document.querySelectorAll("[role=dialog]:not([hidden]), dialog[open], .modal.show").length };
+  }
+
   /** Switch Suma's language the way the language picker does (stored choice, then reload). */
   function setLanguage(lang) {
     localStorage.setItem("language", JSON.stringify(lang));
@@ -357,7 +401,7 @@
   }
 
   Object.defineProperty(window, "__a11y", {
-    value: Object.freeze({ contrast, nonTextContrast, targetSize, focusInfo, textSpacing, clippedText, reflow, structure, liveRegions, tabbables, setLanguage, axe, highlight, clearHighlight, describe }),
+    value: Object.freeze({ contrast, nonTextContrast, targetSize, focusInfo, textSpacing, clippedText, reflow, structure, liveRegions, tabbables, setLanguage, cssPath, disclosureCandidates, visibleCount, axe, highlight, clearHighlight, describe }),
     enumerable: false,
   });
 })();

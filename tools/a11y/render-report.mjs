@@ -11,7 +11,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { HEADING, MARKER, short, statusBlock, TEST_LABEL, testedShaMarker } from "./lib/comment.mjs";
+import { findingsMarker, HEADING, MARKER, short, statusBlock, TEST_LABEL, testedShaMarker } from "./lib/comment.mjs";
 import { criterion, loadConfig, mdEscape, parseArgs, readJson, reportDir } from "./lib/common.mjs";
 
 const args = parseArgs();
@@ -46,7 +46,7 @@ function image(p, caption) {
 }
 
 function markdown() {
-  const lines = [MARKER, HEADING, ""];
+  const lines = [MARKER, HEADING, findingsMarker(findings, args.sha || null), ""];
   if (args.sha) {
     const stale = args["current-sha"] && args["current-sha"] !== args.sha;
     lines.push(
