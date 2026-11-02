@@ -22,3 +22,69 @@ export function checkSession(text, { routesTested = 0 } = {}) {
   }
   return { counts, errors };
 }
+
+/**
+ * Tab and Shift+Tab presses per page path (mount path removed, e.g. "/funding"). Key presses do not
+ * record their page, so each is attributed to the most recent page URL seen in the same browser
+ * (the signed-in and signed-out servers each have their own page), from a navigation's arguments or
+ * any tool result's "Page URL" line.
+ */
+export function keyPressesByPath(text, mountPath = "/app") {
+  const counts = {};
+  const current = {};
+  const toPath = (url) => {
+    try {
+      let p = new URL(url).pathname;
+      if (mountPath && p.startsWith(mountPath)) p = p.slice(mountPath.length) || "/";
+      return p.length > 1 ? p.replace(/\/$/, "") : p;
+    } catch {
+      return null;
+    }
+  };
+  for (const block of text.split(/^(?=### `)/m)) {
+    const m = /^### `(playwright(?:-[a-z]+)?)-(browser_[a-z_]+)`/.exec(block);
+    if (!m) continue;
+    const [, server, tool] = m;
+    if (tool === "browser_navigate") {
+      const url = /"url":\s*"([^"]+)"/.exec(block)?.[1];
+      if (url) current[server] = toPath(url) ?? current[server];
+    }
+    if (tool === "browser_press_key" && current[server]) {
+      const key = /"key":\s*"([^"]+)"/.exec(block)?.[1];
+      if (key === "Tab" || key === "Shift+Tab") counts[current[server]] = (counts[current[server]] || 0) + 1;
+    }
+    const pages = [...block.matchAll(/Page URL: (\S+)/g)];
+    if (pages.length) current[server] = toPath(pages.at(-1)[1]) ?? current[server];
+  }
+  return counts;
+}
+
+/** Criteria whose pass needs a full keyboard pass over the page. */
+export const KEYBOARD_SC = ["2.1.1", "2.1.2", "2.4.3", "2.4.7", "2.4.11", "2.4.12", "2.4.13"];
+
+/**
+ * Move keyboard passes to needsHuman for pages where the agent pressed Tab fewer times than the
+ * page has focusable elements (from the axe sweep; capped, default when unknown).
+ */
+export function enforceKeyboardCoverage(report, { keys, tabbables, cap = 40, fallback = 10 }) {
+  const routeRe = (r) => new RegExp("^" + r.replace(/:[^/]+/g, "[^/]+").replace(/\/$/, "") + "$");
+  const pressesOn = (route) => Object.entries(keys).filter(([p]) => routeRe(route === "/" ? "/" : route).test(p)).reduce((n, [, c]) => n + c, 0);
+  const passes = [];
+  const moved = [];
+  for (const p of report.passes || []) {
+    if (!KEYBOARD_SC.includes(p.sc)) {
+      passes.push(p);
+      continue;
+    }
+    const routes = Array.isArray(p.route) ? p.route : [p.route];
+    const keep = [];
+    for (const r of routes) {
+      const needed = Math.min(tabbables[r] ?? fallback, cap);
+      const got = pressesOn(r);
+      if (got >= needed) keep.push(r);
+      else moved.push({ sc: p.sc, app: p.app, route: r, reason: `Recorded as a pass, but the keyboard pass was incomplete: ${got} Tab presses on a page with ${tabbables[r] ?? "an unknown number of"} focusable elements (needs ${needed}). Not verified.` });
+    }
+    if (keep.length) passes.push({ ...p, route: Array.isArray(p.route) ? keep : keep[0] });
+  }
+  return { passes, moved };
+}

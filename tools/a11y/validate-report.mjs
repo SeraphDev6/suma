@@ -19,7 +19,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { criterion, isMain, loadCatalog, loadConfig, parseArgs, readJson, REPO_ROOT, reportDir, writeJson } from "./lib/common.mjs";
-import { checkSession } from "./lib/session.mjs";
+import { checkSession, enforceKeyboardCoverage, keyPressesByPath } from "./lib/session.mjs";
 
 const args = parseArgs();
 const config = loadConfig();
@@ -183,13 +183,24 @@ function main() {
     const sessionPath = path.resolve(REPO_ROOT, args.session);
     const routesTested = (report.routes || []).filter((r) => r.status === "tested").length;
     if (fs.existsSync(sessionPath)) {
-      session = checkSession(fs.readFileSync(sessionPath, "utf8"), { routesTested });
+      const text = fs.readFileSync(sessionPath, "utf8");
+      session = checkSession(text, { routesTested });
       res.errors.push(...session.errors.map((e) => `browser use: ${e}`));
+      // Keyboard passes count only where the agent pressed Tab through the whole page.
+      const tabbables = {};
+      for (const pg of axe?.pages || []) if (pg.facts?.tabbableCount != null && tabbables[pg.path] == null) tabbables[pg.path] = pg.facts.tabbableCount;
+      const mount = Object.values(config.apps)[0]?.mountPath || "/app";
+      const keys = keyPressesByPath(text, mount);
+      const { passes, moved } = enforceKeyboardCoverage(report, { keys, tabbables });
+      report.passes = passes;
+      report.needsHuman = [...(report.needsHuman || []), ...moved];
+      session.tabPresses = keys;
+      if (moved.length) res.warnings.push(`${moved.length} keyboard passes moved to needsHuman: the agent did not Tab through the whole page`);
     } else if (routesTested) {
       res.errors.push(`browser use: no session transcript at ${args.session}, so live testing cannot be confirmed`);
     }
   }
-  const result = { ...report, findings: res.findings, rejected: res.rejected, validation: { errors: res.errors, warnings: res.warnings, browserCalls: session?.counts, validatedAt: new Date().toISOString() } };
+  const result = { ...report, findings: res.findings, rejected: res.rejected, validation: { errors: res.errors, warnings: res.warnings, browserCalls: session?.counts, tabPresses: session?.tabPresses, validatedAt: new Date().toISOString() } };
   writeJson(path.join(out, "validated.json"), result);
   for (const w of res.warnings) console.log(`warning: ${w}`);
   for (const e of res.errors) console.log(`error: ${e}`);

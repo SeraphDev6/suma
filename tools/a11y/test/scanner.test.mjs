@@ -7,7 +7,7 @@ import { MARKER, replaceStatus, statusBlock, testedSha, testedShaMarker } from "
 import { loadCatalog, reportDir } from "../lib/common.mjs";
 import { parseImports, resolveImport } from "../lib/graph.mjs";
 import { parseImportBindings, parseRoutes } from "../lib/routes.mjs";
-import { checkSession } from "../lib/session.mjs";
+import { checkSession, enforceKeyboardCoverage, keyPressesByPath } from "../lib/session.mjs";
 import { previewBody } from "../preview.mjs";
 import { spreadsChildren } from "../static-scan.mjs";
 import { MEASURED, validate } from "../validate-report.mjs";
@@ -151,4 +151,29 @@ test("session check rejects scripted browsing and accepts step-by-step use", () 
   const good = checkSession(call("browser_navigate") + call("browser_snapshot") + call("browser_press_key") + "### `bash`\n\n$ node tools/a11y/validate-report.mjs\n", { routesTested: 1 });
   assert.deepEqual(good.errors, []);
   assert.deepEqual(checkSession("", { routesTested: 0 }).errors, []);
+});
+
+test("Tab presses are counted per page and per browser", () => {
+  const nav = (srv, url) => `### \`${srv}-browser_navigate\`\n\n\`\`\`json\n{ "url": "${url}" }\n\`\`\`\n- Page URL: ${url}\n`;
+  const key = (srv, k) => `### \`${srv}-browser_press_key\`\n\n\`\`\`json\n{ "key": "${k}" }\n\`\`\`\n`;
+  const log = [
+    nav("playwright", "http://localhost:22001/app/funding"),
+    nav("playwright-anon", "http://localhost:22001/app/sitemap/"),
+    key("playwright", "Tab"), key("playwright", "Shift+Tab"), key("playwright", "Enter"),
+    key("playwright-anon", "Tab"),
+    "### `playwright-browser_click`\n\n- Page URL: http://localhost:22001/app/food/12\n",
+    key("playwright", "Tab"),
+  ].join("\n");
+  assert.deepEqual(keyPressesByPath(log), { "/funding": 2, "/sitemap": 1, "/food/12": 1 });
+});
+
+test("keyboard passes without a full Tab pass move to needsHuman", () => {
+  const report = { passes: [
+    { sc: "2.1.1", app: "webapp", route: ["/funding", "/sitemap", "/food/:id"], method: "m", evidence: "e" },
+    { sc: "1.4.3", app: "webapp", route: "/funding", method: "m", evidence: "e" },
+  ] };
+  const { passes, moved } = enforceKeyboardCoverage(report, { keys: { "/funding": 12, "/sitemap": 2, "/food/7": 10 }, tabbables: { "/funding": 12, "/sitemap": 30 } });
+  assert.deepEqual(passes.map((p) => [p.sc, p.route]), [["2.1.1", ["/funding", "/food/:id"]], ["1.4.3", "/funding"]]);
+  assert.equal(moved.length, 1);
+  assert.match(moved[0].reason, /2 Tab presses on a page with 30 focusable elements \(needs 30\)/);
 });

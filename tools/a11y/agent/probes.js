@@ -272,7 +272,29 @@
     const headings = [...document.querySelectorAll("h1,h2,h3,h4,h5,h6,[role=heading]")].filter(visible).map((h) => ({ level: +(h.getAttribute("aria-level") || h.tagName[1]), text: h.textContent.trim().slice(0, 80) }));
     const landmarks = [...document.querySelectorAll("main,[role=main],nav,[role=navigation],header,[role=banner],footer,[role=contentinfo],aside,[role=complementary],form[aria-label],form[aria-labelledby],[role=search],search,section[aria-label],section[aria-labelledby],[role=region]")].map((l) => ({ element: describe(l), role: l.getAttribute("role") || l.tagName.toLowerCase(), label: l.getAttribute("aria-label") || (l.getAttribute("aria-labelledby") && document.getElementById(l.getAttribute("aria-labelledby"))?.textContent?.trim()) || null }));
     const skip = [...document.querySelectorAll("a[href^='#']")].slice(0, 3).map((a) => ({ text: a.textContent.trim(), href: a.getAttribute("href"), targetExists: !!document.getElementById(a.getAttribute("href").slice(1)) }));
-    return { title: document.title, lang: document.documentElement.lang, headings, landmarks, skipLinks: skip };
+    return { title: document.title, lang: document.documentElement.lang, headings, landmarks, skipLinks: skip, tabbableCount: tabbables().count };
+  }
+
+  /**
+   * Elements reachable with Tab, in DOM order: visible, enabled, tabindex >= 0, not inert or
+   * aria-hidden. A full keyboard pass needs at least this many Tab presses.
+   */
+  function tabbables() {
+    const sel = "a[href],area[href],button,input:not([type=hidden]),select,textarea,iframe,summary,audio[controls],video[controls],[contenteditable=''],[contenteditable=true],[tabindex]";
+    const els = [...document.querySelectorAll(sel)].filter((el) => {
+      if (el.tabIndex < 0 || el.disabled || el.closest("[inert],[aria-hidden=true]")) return false;
+      if (!el.getClientRects().length) return false;
+      const cs = getComputedStyle(el);
+      return cs.visibility !== "hidden" && cs.display !== "none";
+    });
+    return { count: els.length, elements: els.slice(0, 60).map(describe) };
+  }
+
+  /** Switch Suma's language the way the language picker does (stored choice, then reload). */
+  function setLanguage(lang) {
+    localStorage.setItem("language", JSON.stringify(lang));
+    location.reload();
+    return { language: lang, reloading: true };
   }
 
   /** Live regions currently in the DOM and their text (4.1.3). */
@@ -322,7 +344,7 @@
   }
 
   Object.defineProperty(window, "__a11y", {
-    value: Object.freeze({ contrast, nonTextContrast, targetSize, focusInfo, textSpacing, clippedText, reflow, structure, liveRegions, axe, highlight, clearHighlight, describe }),
+    value: Object.freeze({ contrast, nonTextContrast, targetSize, focusInfo, textSpacing, clippedText, reflow, structure, liveRegions, tabbables, setLanguage, axe, highlight, clearHighlight, describe }),
     enumerable: false,
   });
 })();

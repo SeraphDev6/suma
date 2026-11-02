@@ -52,7 +52,7 @@ Never type credentials and never sign out. If a page redirects you somewhere une
 
 To reach a route with parameters (`/food/:id`), follow its `howToReach` hint from `impact.json` by navigating the UI. If there is no data to reach it, mark it `unreachable` with the reason.
 
-For Spanish (`locales` includes `es`), set the language with the site's own language control, or run `() => { localStorage.setItem("language", JSON.stringify("es")); location.reload(); }`, then check that `structure().lang` is `es`.
+For Spanish (`locales` includes `es`), set the language with the site's own language control, or run `() => window.__a11y.setLanguage("es")` (it stores the choice and reloads, as the picker does), then check that `structure().lang` is `es`. Use `setLanguage("en")` to switch back.
 
 ## Measurement probes
 
@@ -68,6 +68,7 @@ Call these through `browser_evaluate`. Pass a CSS selector string, or use the `e
 | `__a11y.textSpacing(true)` / `textSpacing(false)` | 1.4.12 | `clipped` lists elements whose text is now cut off; confirm in a screenshot. Always call `textSpacing(false)` afterwards. |
 | `__a11y.clippedText()` | 1.4.4 at 200% (resize to 640 x 800, which matches 200% zoom of 1280) | text cut off or overlapping; confirm in a screenshot |
 | `__a11y.structure()` | 1.3.1, 1.3.6, 2.4.1, 2.4.2, 2.4.6, 2.4.10, 3.1.1 | headings, landmarks, skip link, title, lang |
+| `__a11y.tabbables()` | planning the keyboard pass | `count` is how many Tab stops the page has, and `elements` lists them in DOM order |
 | `__a11y.liveRegions()` | 4.1.3 | a status, error or loading message appears with no live region or role=status/alert containing it |
 | `__a11y.axe(context?)` | re-check a lead after you change state (open a menu, show errors) | axe `violations` that you then confirm |
 | `__a11y.highlight(sel, "F-001")` / `clearHighlight()` | screenshots | draws an overlay; never changes layout |
@@ -80,7 +81,7 @@ You are testing what a person using a keyboard, a screen reader or a zoomed scre
 
 - Interact only through the Playwright MCP tools: `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_press_key`, `browser_type`, `browser_fill_form`, `browser_select_option`, `browser_hover`, `browser_resize`, `browser_emulate_media`, `browser_wait_for` and `browser_take_screenshot`. Target elements by the `ref` from the latest `browser_snapshot`.
 - Press one key per `browser_press_key` call and check where focus went (`focusInfo()`, or the snapshot) before pressing the next. Never batch key presses, and never Tab a fixed number of times without looking.
-- Use `browser_evaluate` only to call the `window.__a11y` probes or read a property, never to click, focus, type, navigate, loop over routes or change the page. Synthetic `element.click()` or `focus()` calls do not test what a keyboard or pointer user can do.
+- Use `browser_evaluate` only to call the `window.__a11y` probes or read a property, never to click, focus, type, navigate, loop over routes or change the page. The one exception is `__a11y.setLanguage(lang)` to switch language. Synthetic `element.click()` or `focus()` calls do not test what a keyboard or pointer user can do.
 - Never write or run scripts that drive a browser: no Playwright, Puppeteer or Selenium code, no `node -e` with a browser, no reusing `tools/a11y/axe-sweep.mjs`. `browser_run_code_unsafe` is disabled. The workflow checks your session log and rejects the report if the browser was not driven through these tools.
 
 ## Procedure
@@ -91,7 +92,7 @@ Work route by route through `impact.json`. Test the states the diff touches, not
 2. **Resolve the leads for this route** (axe and static). For each lead: reproduce it, inspect the element in the snapshot, measure with the right probe, and decide.
    - Confirmed: write a finding and put the lead ID in `leadIds`.
    - Not a real failure: add it to `dismissedLeads` with the specific reason and the evidence (for example "axe could not compute contrast on an empty input; typed '04/29', contrast() = 15.43:1"). Common false leads: contrast on empty inputs or disabled controls (disabled controls are exempt from 1.4.3), elements hidden from everyone, decorative images correctly hidden, components whose library adds the missing role and keyboard handling at runtime (for example react-bootstrap `Dropdown.Item`), wrapper components whose children supply the name.
-3. **Keyboard pass** (2.1.1, 2.1.2, 2.4.3, 2.4.7, 2.4.11, 2.4.12, 2.4.13, 3.2.1). Start at the top of the page and Tab through every interactive element the diff touches (and the page chrome once per run). After each press call `focusInfo()`. Operate each control with Enter/Space/arrows. Open and close every dialog or menu with the keyboard and confirm where focus goes when it closes. Screenshot the focus state of anything that fails, and one representative focused control for passes on 2.4.7 and 2.4.13.
+3. **Keyboard pass** (2.1.1, 2.1.2, 2.4.3, 2.4.7, 2.4.11, 2.4.12, 2.4.13, 3.2.1). Call `tabbables()` to see how many Tab stops the page has. Start at the top of the page and press Tab until focus has visited every stop and wraps back to the start (or leaves the page), one press at a time. After each press call `focusInfo()`. A pass for any of these criteria on a route only counts if you pressed Tab on that route at least as many times as it has Tab stops (up to 40): the workflow counts your `browser_press_key` calls per page in the session log and moves passes without a full keyboard pass to `needsHuman`. If a page has more than 40 stops, cover the stops the diff touches and the page chrome within those 40. Operate each control with Enter/Space/arrows. Open and close every dialog or menu with the keyboard and confirm where focus goes when it closes. Screenshot the focus state of anything that fails, and one representative focused control for passes on 2.4.7 and 2.4.13.
 4. **Names, roles, states** (1.1.1, 1.3.1, 2.4.4, 2.4.6, 2.4.9, 2.5.3, 4.1.2). From the snapshot: every control and image has the right name and role, the accessible name contains the visible label text (2.5.3), expanded/selected/checked/disabled states are exposed, links make sense in context (2.4.4) and alone (2.4.9).
 5. **Visual checks** (1.4.1, 1.4.3, 1.4.6, 1.4.11, 1.4.13). Measure contrast of the changed text and controls, including hover, focus, disabled-looking and error states. Check that colour is not the only signal for state or errors. For tooltips or hover content: it can be dismissed with Escape, hovered itself, and stays until dismissed.
 6. **Resize and spacing** (1.4.4, 1.4.10, 1.4.12). Resize to 320 x 640 and run `reflow()`; resize to 640 x 800 and run `clippedText()`; back at 1280 x 800 run `textSpacing(true)`, screenshot, `textSpacing(false)`. Restore the viewport.
@@ -166,7 +167,9 @@ Run:
 node tools/a11y/validate-report.mjs
 ```
 
-It rejects findings without a screenshot on disk, steps, expected/actual, a real `why`, or (for measurable criteria) a probe measurement that shows the failure; and it lists unresolved leads, routes missing from `routes[]`, and checklist criteria with no outcome. Fix every error by testing more, not by editing evidence. If a finding is rejected because the measurement shows a pass, the finding was wrong: remove it or move it to `needsHuman`. Repeat until the validator exits 0, then stop.
+It rejects findings without a screenshot on disk, steps, expected/actual, a real `why`, or (for measurable criteria) a probe measurement that shows the failure; and it lists unresolved leads, routes missing from `routes[]`, and checklist criteria with no outcome. Fix every error by testing more, not by editing evidence. If a finding is rejected because the measurement shows a pass, the finding was wrong: remove it or move it to `needsHuman`. Repeat until the validator exits 0.
+
+Then, if you have time left, work through your own `needsHuman` entries: anything you can settle by testing more (another state, another locale, a full keyboard pass, a measurement) is a finding or a pass, not a question for a human. Keep `needsHuman` for what truly needs judgement or an action you are not allowed to take. Re-run the validator after each change, then stop.
 
 ## Things you must not do
 
