@@ -5,17 +5,18 @@
  *   <reportDir>/report.html  self-contained report with screenshots embedded
  *
  *   node render-report.mjs [--image-base https://.../] [--artifact-url URL] [--run-url URL]
+ *                          [--sha TESTED_SHA] [--current-sha PR_HEAD_SHA]
  * --image-base: public URL prefix where the screenshots directory was published; without it
  * the comment names the files and links the artifact instead of embedding images.
  */
 import fs from "node:fs";
 import path from "node:path";
+import { HEADING, MARKER, short, statusBlock, TEST_LABEL, testedShaMarker } from "./lib/comment.mjs";
 import { criterion, loadConfig, mdEscape, parseArgs, readJson, reportDir } from "./lib/common.mjs";
 
 const args = parseArgs();
 const config = loadConfig();
 const out = reportDir(config);
-const MARKER = "<!-- suma-a11y-impact-report -->";
 const SEV = { critical: 0, high: 1, medium: 2, low: 3 };
 const LEVEL = { A: 0, AA: 1, AAA: 2 };
 
@@ -45,7 +46,19 @@ function image(p, caption) {
 }
 
 function markdown() {
-  const lines = [MARKER, "## Accessibility phase 2: live test of the changed pages", ""];
+  const lines = [MARKER, HEADING, ""];
+  if (args.sha) {
+    const stale = args["current-sha"] && args["current-sha"] !== args.sha;
+    lines.push(
+      testedShaMarker(args.sha),
+      statusBlock(
+        stale
+          ? [`> [!WARNING]`, `> Tested commit \`${short(args.sha)}\`; newer commits were pushed during the test (latest \`${short(args["current-sha"])}\`). Add the \`${TEST_LABEL}\` label to test again.`]
+          : [`> [!NOTE]`, `> Tested commit \`${short(args.sha)}\`. After pushing more commits, add the \`${TEST_LABEL}\` label to test again.`],
+      ),
+      "",
+    );
+  }
   lines.push(v.summary || "", "");
   const byLevel = { A: 0, AA: 0, AAA: 0 };
   for (const f of findings) byLevel[f.level]++;
@@ -53,6 +66,11 @@ function markdown() {
   const tested = (v.routes || []).filter((r) => r.status === "tested").length;
   lines.push("| Confirmed failures | Level A | Level AA | Level AAA | Passed checks | Routes tested | Needs a human |", "|---|---|---|---|---|---|---|");
   lines.push(`| **${findings.length}** | ${byLevel.A} | ${byLevel.AA} | ${byLevel.AAA} | ${passCount} | ${tested} of ${(v.routes || []).length} | ${(v.needsHuman || []).length} |`, "");
+  const calls = v.validation?.browserCalls;
+  if (calls) {
+    const c = (t) => calls[t] || 0;
+    lines.push(`Browser actions by the agent: ${c("browser_navigate")} page loads, ${c("browser_press_key")} key presses, ${c("browser_click")} clicks, ${c("browser_type") + c("browser_fill_form")} text entries, ${c("browser_snapshot")} accessibility snapshots, ${c("browser_take_screenshot")} screenshots.`, "");
+  }
   if (v.validation?.errors?.length) {
     lines.push(`> [!WARNING]`, `> The agent's report did not pass validation (${v.validation.errors.length} problems). Results below are incomplete; see the artifact.`, "");
   }

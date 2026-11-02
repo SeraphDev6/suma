@@ -1,27 +1,35 @@
 name: Accessibility phase 2 (traced impact)
 
-# 1. Trace the diff to the pages it can affect (tools/a11y/impact.mjs).
-# 2. Start Suma with a bootstrapped database, run axe-core on those pages (leads + screenshots).
-# 3. A Copilot CLI agent (.github/agents/a11y-tester.agent.md) drives Playwright MCP to confirm or
-#    dismiss each lead and test interactions, then writes a11y-report/report.json.
-# 4. The validator drops any claimed failure without evidence; the publish job comments on the PR.
+# Every push to a PR runs only the preview: trace the diff to the member pages it affects
+# (tools/a11y/impact.mjs, seconds, no app) and update the sticky comment.
+#
+# The live test is manual, because it builds and starts Suma and spends Copilot requests. Start it by
+# adding the `a11y-test` label to the PR (the workflow removes the label when done, so add it again
+# to re-test), or from the Actions tab with "Run workflow" once this file is on the default branch.
+#   1. Trace the diff to the affected pages.
+#   2. Start Suma with a bootstrapped database and run axe-core on those pages (leads + screenshots).
+#   3. A Copilot CLI agent (.github/agents/a11y-tester.agent.md) drives Playwright MCP to confirm or
+#      dismiss each lead and test interactions, then writes a11y-report/report.json.
+#   4. The validator drops any claimed failure without evidence; the publish job comments on the PR.
 #
 # Setup:
+#   - Create the label once: gh label create a11y-test --description "Run the live accessibility test"
 #   - Copilot CLI auth: either enable "Allow use of Copilot CLI billed to the organization" for the
 #     org (then github.token with copilot-requests: write is enough), or add a fine-grained PAT with
 #     the "Copilot Requests" permission as the secret COPILOT_GITHUB_TOKEN.
 #   - Optional repository variables:
 #       A11Y_AGENT_MODEL     model for the agent (default: Copilot's default)
-#       A11Y_FAIL_LEVEL      fail the check on confirmed failures introduced by the PR at this
-#                            level or stricter: A, AA (default) or AAA; "none" to report only
+#       A11Y_FAIL_LEVEL      fail the test run on confirmed failures introduced by the PR at this
+#                            level or stricter: A, AA or AAA. Default "none": the test is advisory.
 #       A11Y_EVIDENCE_BRANCH branch to publish screenshots to so they show inline in the comment
 #                            (default a11y-evidence; set to "off" to only attach the artifact)
 #
-# Pull requests from forks are skipped: they get no secrets and must not run an agent with tools.
+# Pull requests from forks get the preview in the job summary only, and never the live test: they
+# get no secrets and must not run an agent with tools.
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
     paths:
       - "webapp/**"
       - "data/i18n/**"
@@ -32,14 +40,60 @@ on:
       base:
         description: Base ref to diff against
         default: origin/main
+      pr:
+        description: Pull request number to comment on (optional)
+        required: false
 
+# Pushes cancel an older preview, and re-adding the label cancels an older test, but a push never
+# cancels a running test: each kind of run has its own group.
 concurrency:
-  group: a11y-impact-${{ github.event.pull_request.number || github.ref }}
+  group: a11y-impact-${{ github.event.pull_request.number || inputs.pr || github.ref }}-${{ github.event_name == 'workflow_dispatch' && 'test' || github.event.action == 'labeled' && format('label-{0}', github.event.label.name) || 'preview' }}
   cancel-in-progress: true
 
 jobs:
+  preview:
+    if: github.event_name == 'pull_request' && github.event.action != 'labeled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      A11Y_REPORT_DIR: a11y-report
+      PR: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Trace the diff to affected pages
+        run: node tools/a11y/impact.mjs --base "origin/${{ github.base_ref }}" --head "$HEAD_SHA"
+
+      - name: Update the comment
+        run: |
+          same_repo=${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          if [ "$same_repo" = true ]; then
+            node tools/a11y/pr-comment.mjs fetch --pr "$PR" --out a11y-report/existing.md
+            node tools/a11y/preview.mjs --sha "$HEAD_SHA" --existing a11y-report/existing.md > /dev/null
+            node tools/a11y/pr-comment.mjs put --pr "$PR" --file a11y-report/comment.md
+          else
+            node tools/a11y/preview.mjs --sha "$HEAD_SHA" > /dev/null
+          fi
+          cat a11y-report/comment.md >> "$GITHUB_STEP_SUMMARY"
+
   test:
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'a11y-test' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 75
     permissions:
@@ -49,9 +103,12 @@ jobs:
       A11Y_REPORT_DIR: a11y-report
     outputs:
       routes: ${{ steps.impact.outputs.routes }}
+      sha: ${{ steps.impact.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
+          # Test the PR head itself, so the commit named in the comment is the one tested.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           # The agent has a shell; it must not find a token in .git/config.
           persist-credentials: false
@@ -75,6 +132,7 @@ jobs:
         run: |
           node tools/a11y/impact.mjs --base "$BASE" --head "$HEAD_SHA"
           echo "routes=$(node -e 'const i=require("./a11y-report/impact.json");console.log(Object.values(i.apps).reduce((n,a)=>n+a.routes.length,0))')" >> "$GITHUB_OUTPUT"
+          echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Start Suma
         if: steps.impact.outputs.routes != '0'
@@ -107,6 +165,8 @@ jobs:
             --deny-tool 'shell(git push)' \
             --deny-tool 'shell(git commit)' \
             --deny-tool 'shell(gh:*)' \
+            --deny-tool 'playwright(browser_run_code_unsafe)' \
+            --deny-tool 'playwright-anon(browser_run_code_unsafe)' \
             --no-ask-user \
             --no-auto-update \
             --log-dir a11y-report/logs \
@@ -118,7 +178,7 @@ jobs:
           if [ ! -f a11y-report/report.json ]; then
             echo '{"summary":"The agent did not produce a report.","routes":[],"findings":[],"passes":[],"notApplicable":[],"needsHuman":[],"dismissedLeads":[]}' > a11y-report/report.json
           fi
-          node tools/a11y/validate-report.mjs --report-only
+          node tools/a11y/validate-report.mjs --report-only --session a11y-report/agent-session.md
 
       - name: Keep the report, screenshots and logs
         if: always()
@@ -139,11 +199,13 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
       actions: read
     env:
       A11Y_REPORT_DIR: a11y-report
       EVIDENCE_BRANCH: ${{ vars.A11Y_EVIDENCE_BRANCH || 'a11y-evidence' }}
-      PR: ${{ github.event.pull_request.number }}
+      PR: ${{ github.event.pull_request.number || inputs.pr }}
+      TESTED_SHA: ${{ needs.test.outputs.sha || github.event.pull_request.head.sha || github.sha }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -166,7 +228,10 @@ jobs:
             echo "<!-- suma-a11y-impact-report -->"
             echo "## Accessibility phase 2: live test of the changed pages"
             echo ""
-            echo "No member app pages are affected by this diff, so nothing was tested in the browser."
+            echo "<!-- a11y-tested-sha: ${TESTED_SHA} -->"
+            echo "<!-- a11y-status:start -->"
+            echo "No member app pages are affected by commit \`${TESTED_SHA:0:8}\`, so nothing was tested in the browser."
+            echo "<!-- a11y-status:end -->"
           } > a11y-report/comment.md
 
       - name: Publish screenshots for inline display
@@ -197,38 +262,38 @@ jobs:
       - name: Render the comment
         if: needs.test.outputs.routes != '0' && hashFiles('a11y-report/validated.json') != ''
         run: |
+          current=""
+          if [ -n "$PR" ]; then current=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" --jq .head.sha); fi
           node tools/a11y/render-report.mjs \
             ${{ steps.evidence.outputs.base && format('--image-base {0}', steps.evidence.outputs.base) || '' }} \
+            --sha "$TESTED_SHA" \
+            ${current:+--current-sha "$current"} \
             --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             --artifact-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}#artifacts"
           cat a11y-report/comment.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on the pull request
         if: env.PR != '' && hashFiles('a11y-report/comment.md') != ''
-        run: |
-          existing=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
-            --jq '.[] | select(.body | startswith("<!-- suma-a11y-impact-report -->")) | .id' | head -1)
-          if [ -n "$existing" ]; then
-            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -F body=@a11y-report/comment.md >/dev/null
-          else
-            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -F body=@a11y-report/comment.md >/dev/null
-          fi
+        run: node tools/a11y/pr-comment.mjs put --pr "$PR" --file a11y-report/comment.md
+
+      - name: Remove the label so adding it again re-tests
+        if: always() && github.event.action == 'labeled'
+        run: gh api -X DELETE "repos/${GITHUB_REPOSITORY}/issues/${PR}/labels/a11y-test" > /dev/null || true
 
       - name: Fail on failures this PR introduces
         if: needs.test.outputs.routes != '0'
         env:
-          FAIL_LEVEL: ${{ vars.A11Y_FAIL_LEVEL || 'AA' }}
+          FAIL_LEVEL: ${{ vars.A11Y_FAIL_LEVEL || 'none' }}
         run: |
           node -e '
             const fs = require("fs");
             const p = "a11y-report/validated.json";
-            if (!fs.existsSync(p)) { console.log("::error::No validated report; see the test job."); process.exit(1); }
-            const v = JSON.parse(fs.readFileSync(p, "utf8"));
             const lvl = process.env.FAIL_LEVEL;
-            if (lvl === "none") process.exit(0);
+            if (!fs.existsSync(p)) { console.log("::error::No validated report; see the test job."); process.exit(lvl === "none" ? 0 : 1); }
+            const v = JSON.parse(fs.readFileSync(p, "utf8"));
             const order = { A: 0, AA: 1, AAA: 2 };
-            const bad = v.findings.filter((f) => f.introducedByDiff === "yes" && order[f.level] <= order[lvl]);
+            const bad = v.findings.filter((f) => f.introducedByDiff === "yes" && (lvl === "none" || order[f.level] <= order[lvl]));
             if (v.validation.errors.length) console.log(`::warning::The agent report had ${v.validation.errors.length} validation problems; coverage is incomplete.`);
-            for (const f of bad) console.log(`::error::${f.id} WCAG ${f.sc.join(", ")} (${f.level}) on ${f.route}: ${f.title}`);
-            process.exit(bad.length ? 1 : 0);
+            for (const f of bad) console.log(`::${lvl === "none" ? "warning" : "error"}::${f.id} WCAG ${f.sc.join(", ")} (${f.level}) on ${f.route}: ${f.title}`);
+            process.exit(lvl !== "none" && bad.length ? 1 : 0);
           '

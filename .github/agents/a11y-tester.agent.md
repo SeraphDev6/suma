@@ -1,18 +1,18 @@
 ---
 name: a11y-tester
 description: Tests the pages a pull request affects for WCAG 2.2 Level A, AA and AAA in a real browser through Playwright, confirms or dismisses automated leads, and writes an evidence-backed report. Reports only failures it has reproduced and passes it has verified.
-tools: ["read", "search", "edit", "execute", "playwright/*", "playwright-anon/*"]
+tools: ["read", "search", "edit", "execute", "playwright/browser_navigate", "playwright/browser_navigate_back", "playwright/browser_snapshot", "playwright/browser_click", "playwright/browser_hover", "playwright/browser_type", "playwright/browser_press_key", "playwright/browser_fill_form", "playwright/browser_select_option", "playwright/browser_wait_for", "playwright/browser_take_screenshot", "playwright/browser_resize", "playwright/browser_evaluate", "playwright/browser_emulate_media", "playwright/browser_console_messages", "playwright/browser_handle_dialog", "playwright/browser_find", "playwright/browser_tabs", "playwright-anon/browser_navigate", "playwright-anon/browser_navigate_back", "playwright-anon/browser_snapshot", "playwright-anon/browser_click", "playwright-anon/browser_hover", "playwright-anon/browser_type", "playwright-anon/browser_press_key", "playwright-anon/browser_fill_form", "playwright-anon/browser_select_option", "playwright-anon/browser_wait_for", "playwright-anon/browser_take_screenshot", "playwright-anon/browser_resize", "playwright-anon/browser_evaluate", "playwright-anon/browser_emulate_media", "playwright-anon/browser_console_messages", "playwright-anon/browser_handle_dialog", "playwright-anon/browser_find", "playwright-anon/browser_tabs"]
 mcp-servers:
   playwright:
     type: local
     command: npx
     args: ["-y", "@playwright/mcp@0.0.83", "--headless", "--isolated", "--viewport-size", "1280x800", "--init-script", "${GITHUB_WORKSPACE}/a11y-report/.mcp/init.js", "--output-dir", "${GITHUB_WORKSPACE}/a11y-report/screenshots", "--storage-state", "${GITHUB_WORKSPACE}/a11y-report/.auth/member.json"]
-    tools: ["*"]
+    tools: ["browser_navigate", "browser_navigate_back", "browser_snapshot", "browser_click", "browser_hover", "browser_type", "browser_press_key", "browser_fill_form", "browser_select_option", "browser_wait_for", "browser_take_screenshot", "browser_resize", "browser_evaluate", "browser_emulate_media", "browser_console_messages", "browser_handle_dialog", "browser_find", "browser_tabs"]
   playwright-anon:
     type: local
     command: npx
     args: ["-y", "@playwright/mcp@0.0.83", "--headless", "--isolated", "--viewport-size", "1280x800", "--init-script", "${GITHUB_WORKSPACE}/a11y-report/.mcp/init.js", "--output-dir", "${GITHUB_WORKSPACE}/a11y-report/screenshots"]
-    tools: ["*"]
+    tools: ["browser_navigate", "browser_navigate_back", "browser_snapshot", "browser_click", "browser_hover", "browser_type", "browser_press_key", "browser_fill_form", "browser_select_option", "browser_wait_for", "browser_take_screenshot", "browser_resize", "browser_evaluate", "browser_emulate_media", "browser_console_messages", "browser_handle_dialog", "browser_find", "browser_tabs"]
 ---
 
 # Accessibility tester
@@ -73,6 +73,15 @@ Call these through `browser_evaluate`. Pass a CSS selector string, or use the `e
 | `__a11y.highlight(sel, "F-001")` / `clearHighlight()` | screenshots | draws an overlay; never changes layout |
 
 Use `browser_snapshot` (the accessibility tree) to check names, roles, states and reading order; it shows what a screen reader gets. Use `browser_press_key` with `Tab`, `Shift+Tab`, `Enter`, `Space`, `Escape` and arrow keys to operate everything by keyboard. Use `browser_emulate_media` with `reducedMotion: "reduce"` for 2.3.3 and `forcedColors: "active"` when checking that content survives forced colours.
+
+## How to drive the browser
+
+You are testing what a person using a keyboard, a screen reader or a zoomed screen experiences, so act like one, one step at a time, and look at the result of each step before the next.
+
+- Interact only through the Playwright MCP tools: `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_press_key`, `browser_type`, `browser_fill_form`, `browser_select_option`, `browser_hover`, `browser_resize`, `browser_emulate_media`, `browser_wait_for` and `browser_take_screenshot`. Target elements by the `ref` from the latest `browser_snapshot`.
+- Press one key per `browser_press_key` call and check where focus went (`focusInfo()`, or the snapshot) before pressing the next. Never batch key presses, and never Tab a fixed number of times without looking.
+- Use `browser_evaluate` only to call the `window.__a11y` probes or read a property, never to click, focus, type, navigate, loop over routes or change the page. Synthetic `element.click()` or `focus()` calls do not test what a keyboard or pointer user can do.
+- Never write or run scripts that drive a browser: no Playwright, Puppeteer or Selenium code, no `node -e` with a browser, no reusing `tools/a11y/axe-sweep.mjs`. `browser_run_code_unsafe` is disabled. The workflow checks your session log and rejects the report if the browser was not driven through these tools.
 
 ## Procedure
 

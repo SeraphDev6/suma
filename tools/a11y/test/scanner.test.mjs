@@ -3,9 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { tagToSc } from "../axe-sweep.mjs";
+import { MARKER, replaceStatus, statusBlock, testedSha, testedShaMarker } from "../lib/comment.mjs";
 import { loadCatalog, reportDir } from "../lib/common.mjs";
 import { parseImports, resolveImport } from "../lib/graph.mjs";
 import { parseImportBindings, parseRoutes } from "../lib/routes.mjs";
+import { checkSession } from "../lib/session.mjs";
+import { previewBody } from "../preview.mjs";
 import { spreadsChildren } from "../static-scan.mjs";
 import { MEASURED, validate } from "../validate-report.mjs";
 
@@ -111,4 +114,41 @@ test("validator accepts proven findings and rejects unproven ones", () => {
   } finally {
     fs.rmSync(path.join(out, shot), { force: true });
   }
+});
+
+test("preview says what is in scope and keeps earlier results when commits are pushed", () => {
+  const route = { path: "/funding", locales: ["en", "es"], reasons: [{ why: "changed webapp/src/pages/Funding.jsx" }] };
+  const impact = { apps: { webapp: { routes: [route], notTested: [] } } };
+  const fresh = previewBody({ impact, sha: "aaaaaaaa1111", existing: null });
+  assert.ok(fresh.startsWith(MARKER));
+  assert.match(fresh, /Not tested yet/);
+  assert.match(fresh, /`\/funding` \(en, es\)/);
+  assert.match(fresh, /a11y-test/);
+
+  const tested = [MARKER, "## h", "", testedShaMarker("aaaaaaaa1111"), statusBlock(["Tested commit aaaaaaaa."]), "", "### Confirmed failures", "F-001"].join("\n");
+  assert.equal(testedSha(tested), "aaaaaaaa1111");
+  const same = previewBody({ impact, sha: "aaaaaaaa1111", existing: tested });
+  assert.match(same, /latest commit/);
+  const stale = previewBody({ impact, sha: "bbbbbbbb2222", existing: tested });
+  assert.match(stale, /Newer commits have been pushed \(latest `bbbbbbbb`\)/);
+  assert.match(stale, /### Confirmed failures\nF-001/, "earlier results are kept");
+  assert.equal(stale.match(/a11y-status:start/g).length, 1, "status block is replaced, not added");
+
+  const none = previewBody({ impact: { apps: { webapp: { routes: [], notTested: [] } } }, sha: "cccccccc", existing: null });
+  assert.match(none, /no member app pages/);
+  assert.doesNotMatch(none, /Add the/);
+  assert.match(replaceStatus("x", statusBlock(["s"])), /^<!-- a11y-status:start -->/);
+});
+
+test("session check rejects scripted browsing and accepts step-by-step use", () => {
+  const call = (t) => `### \`playwright-${t}\`\n\nresult\n`;
+  const scripted = call("browser_navigate") + call("browser_run_code_unsafe") + "### `bash`\n\n$ node -e \"require('playwright').chromium.launch()\"\n";
+  const bad = checkSession(scripted, { routesTested: 2 });
+  assert.equal(bad.counts.browser_run_code_unsafe, 1);
+  assert.match(bad.errors.join("\n"), /browser_run_code_unsafe 1 times/);
+  assert.match(bad.errors.join("\n"), /from the shell/);
+  assert.match(bad.errors.join("\n"), /browser_press_key was never called/);
+  const good = checkSession(call("browser_navigate") + call("browser_snapshot") + call("browser_press_key") + "### `bash`\n\n$ node tools/a11y/validate-report.mjs\n", { routesTested: 1 });
+  assert.deepEqual(good.errors, []);
+  assert.deepEqual(checkSession("", { routesTested: 0 }).errors, []);
 });

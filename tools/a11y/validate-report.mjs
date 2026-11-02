@@ -19,6 +19,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { criterion, isMain, loadCatalog, loadConfig, parseArgs, readJson, REPO_ROOT, reportDir, writeJson } from "./lib/common.mjs";
+import { checkSession } from "./lib/session.mjs";
 
 const args = parseArgs();
 const config = loadConfig();
@@ -176,7 +177,19 @@ function main() {
   const impact = load("impact.json");
   const axe = load("axe.json");
   const res = validate(report, { impact, axe, catalog: loadCatalog(), checklist: config.agentChecklist });
-  const result = { ...report, findings: res.findings, rejected: res.rejected, validation: { errors: res.errors, warnings: res.warnings, validatedAt: new Date().toISOString() } };
+  let session;
+  if (args.session) {
+    // The workflow passes the transcript after the agent finishes; the agent's own runs skip this.
+    const sessionPath = path.resolve(REPO_ROOT, args.session);
+    const routesTested = (report.routes || []).filter((r) => r.status === "tested").length;
+    if (fs.existsSync(sessionPath)) {
+      session = checkSession(fs.readFileSync(sessionPath, "utf8"), { routesTested });
+      res.errors.push(...session.errors.map((e) => `browser use: ${e}`));
+    } else if (routesTested) {
+      res.errors.push(`browser use: no session transcript at ${args.session}, so live testing cannot be confirmed`);
+    }
+  }
+  const result = { ...report, findings: res.findings, rejected: res.rejected, validation: { errors: res.errors, warnings: res.warnings, browserCalls: session?.counts, validatedAt: new Date().toISOString() } };
   writeJson(path.join(out, "validated.json"), result);
   for (const w of res.warnings) console.log(`warning: ${w}`);
   for (const e of res.errors) console.log(`error: ${e}`);
