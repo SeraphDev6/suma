@@ -24,14 +24,16 @@ export function checkSession(text, { routesTested = 0 } = {}) {
 }
 
 /**
- * Tab and Shift+Tab presses per page path (mount path removed, e.g. "/funding"). Key presses do not
- * record their page, so each is attributed to the most recent page URL seen in the same browser
- * (the signed-in and signed-out servers each have their own page), from a navigation's arguments or
- * any tool result's "Page URL" line.
+ * What the agent did on each page, from the transcript, keyed by page path (mount path removed,
+ * e.g. "/funding"). Each browser (signed-in and signed-out server) has its own current page,
+ * viewport and media settings. A tool result's "Page URL" line, or a navigation's URL, sets the
+ * current page; key presses and probe calls carry no URL and belong to the current page.
+ *
+ *   { "/funding": { tabs, snapshots, widths: [1280, 320], reducedMotion, textSpacing } }
  */
-export function keyPressesByPath(text, mountPath = "/app") {
-  const counts = {};
-  const current = {};
+export function pageEvidence(text, mountPath = "/app") {
+  const pages = {};
+  const state = {};
   const toPath = (url) => {
     try {
       let p = new URL(url).pathname;
@@ -41,50 +43,131 @@ export function keyPressesByPath(text, mountPath = "/app") {
       return null;
     }
   };
+  const page = (path) => (pages[path] ||= { tabs: 0, snapshots: 0, widths: [], reducedMotion: false, textSpacing: false });
+  const visit = (st) => {
+    if (!st.path) return;
+    const pg = page(st.path);
+    if (!pg.widths.includes(st.width)) pg.widths.push(st.width);
+    if (st.reducedMotion) pg.reducedMotion = true;
+  };
   for (const block of text.split(/^(?=### `)/m)) {
     const m = /^### `(playwright(?:-[a-z]+)?)-(browser_[a-z_]+)`/.exec(block);
     if (!m) continue;
     const [, server, tool] = m;
-    if (tool === "browser_navigate") {
-      const url = /"url":\s*"([^"]+)"/.exec(block)?.[1];
-      if (url) current[server] = toPath(url) ?? current[server];
+    const st = (state[server] ||= { path: null, width: 1280, reducedMotion: false });
+    const urls = [...block.matchAll(/Page URL: (\S+)/g)].map((u) => u[1]);
+    const navUrl = tool === "browser_navigate" ? /"url":\s*"([^"]+)"/.exec(block)?.[1] : null;
+    const next = urls.at(-1) || navUrl;
+    if (next) {
+      const path = toPath(next);
+      if (path && path !== st.path) {
+        st.path = path;
+        visit(st);
+      }
     }
-    if (tool === "browser_press_key" && current[server]) {
+    if (!st.path) continue;
+    const pg = page(st.path);
+    if (tool === "browser_resize") {
+      const w = Number(/"width":\s*(\d+)/.exec(block)?.[1]);
+      if (w) {
+        st.width = w;
+        visit(st);
+      }
+    } else if (tool === "browser_emulate_media") {
+      const rm = /"reducedMotion":\s*"([^"]+)"/.exec(block)?.[1];
+      if (rm) st.reducedMotion = rm === "reduce";
+      visit(st);
+    } else if (tool === "browser_press_key") {
       const key = /"key":\s*"([^"]+)"/.exec(block)?.[1];
-      if (key === "Tab" || key === "Shift+Tab") counts[current[server]] = (counts[current[server]] || 0) + 1;
+      if (key === "Tab" || key === "Shift+Tab") pg.tabs++;
+    } else if (tool === "browser_snapshot") {
+      pg.snapshots++;
+    } else if (tool === "browser_evaluate" && /textSpacing\((true)?\)/.test(block.split("</details>")[0])) {
+      pg.textSpacing = true;
     }
-    const pages = [...block.matchAll(/Page URL: (\S+)/g)];
-    if (pages.length) current[server] = toPath(pages.at(-1)[1]) ?? current[server];
   }
-  return counts;
+  return pages;
+}
+
+/** Tab and Shift+Tab presses per page path. */
+export function keyPressesByPath(text, mountPath = "/app") {
+  return Object.fromEntries(Object.entries(pageEvidence(text, mountPath)).filter(([, e]) => e.tabs).map(([p, e]) => [p, e.tabs]));
 }
 
 /** Criteria whose pass needs a full keyboard pass over the page. */
 export const KEYBOARD_SC = ["2.1.1", "2.1.2", "2.4.3", "2.4.7", "2.4.11", "2.4.12", "2.4.13"];
 
 /**
- * Move keyboard passes to needsHuman for pages where the agent pressed Tab fewer times than the
- * page has focusable elements (from the axe sweep; capped, default when unknown).
+ * Criteria a pass needs session-log proof for, on each page it names. A needsHuman entry for one of
+ * these must give a blocker: they are tests the agent can run, not judgement calls.
  */
-export function enforceKeyboardCoverage(report, { keys, tabbables, cap = 40, fallback = 10 }) {
-  const routeRe = (r) => new RegExp("^" + r.replace(/:[^/]+/g, "[^/]+").replace(/\/$/, "") + "$");
-  const pressesOn = (route) => Object.entries(keys).filter(([p]) => routeRe(route === "/" ? "/" : route).test(p)).reduce((n, [, c]) => n + c, 0);
+export const PROCEDURAL = {
+  ...Object.fromEntries(KEYBOARD_SC.map((sc) => [sc, "a full keyboard pass (Tab presses at least equal to the page's Tab stops, up to 40)"])),
+  "1.4.10": "a resize to 320px wide on the page",
+  "1.4.4": "a resize to about 640px wide (200% zoom) on the page",
+  "1.4.12": "a textSpacing() probe call on the page",
+  "2.3.3": "reduced motion emulated while on the page",
+  "4.1.2": "an accessibility snapshot of the page",
+  "1.3.1": "an accessibility snapshot of the page",
+};
+
+export const BLOCKERS = ["unreachable", "irreversible", "ambiguous", "tool-limit"];
+
+/** Does the session log show the work a pass on this criterion and page needs? */
+export function hasEvidence(sc, ev, { tabbables, cap = 40, fallback = 10 } = {}) {
+  if (!ev) return false;
+  if (KEYBOARD_SC.includes(sc)) return ev.tabs >= Math.min(tabbables ?? fallback, cap);
+  if (sc === "1.4.10") return ev.widths.some((w) => w <= 320);
+  if (sc === "1.4.4") return ev.widths.some((w) => w >= 560 && w <= 720);
+  if (sc === "1.4.12") return ev.textSpacing;
+  if (sc === "2.3.3") return ev.reducedMotion;
+  if (sc === "4.1.2" || sc === "1.3.1") return ev.snapshots > 0;
+  return true;
+}
+
+/**
+ * Move passes on procedural criteria to needsHuman for pages where the session log does not show
+ * the work they need. Returns the remaining passes and the moved entries.
+ */
+export function enforceCoverage(report, { evidence, tabbables = {} }) {
+  const routeRe = (r) => new RegExp("^" + (r === "/" ? "/" : r.replace(/:[^/]+/g, "[^/]+").replace(/\/$/, "")) + "$");
+  const merged = (route) => {
+    const hits = Object.entries(evidence).filter(([p]) => routeRe(route).test(p)).map(([, e]) => e);
+    if (!hits.length) return null;
+    return {
+      tabs: hits.reduce((n, e) => n + e.tabs, 0),
+      snapshots: hits.reduce((n, e) => n + e.snapshots, 0),
+      widths: hits.flatMap((e) => e.widths),
+      reducedMotion: hits.some((e) => e.reducedMotion),
+      textSpacing: hits.some((e) => e.textSpacing),
+    };
+  };
   const passes = [];
   const moved = [];
   for (const p of report.passes || []) {
-    if (!KEYBOARD_SC.includes(p.sc)) {
+    if (!PROCEDURAL[p.sc]) {
       passes.push(p);
       continue;
     }
     const routes = Array.isArray(p.route) ? p.route : [p.route];
     const keep = [];
     for (const r of routes) {
-      const needed = Math.min(tabbables[r] ?? fallback, cap);
-      const got = pressesOn(r);
-      if (got >= needed) keep.push(r);
-      else moved.push({ sc: p.sc, app: p.app, route: r, reason: `Recorded as a pass, but the keyboard pass was incomplete: ${got} Tab presses on a page with ${tabbables[r] ?? "an unknown number of"} focusable elements (needs ${needed}). Not verified.` });
+      const ev = merged(r);
+      if (hasEvidence(p.sc, ev, { tabbables: tabbables[r] })) keep.push(r);
+      else {
+        const detail = KEYBOARD_SC.includes(p.sc) ? ` (${ev?.tabs ?? 0} Tab presses on a page with ${tabbables[r] ?? "an unknown number of"} Tab stops)` : "";
+        moved.push({ sc: p.sc, app: p.app, route: r, blocker: "unverified", downgraded: true, reason: `Recorded as a pass, but the session log does not show ${PROCEDURAL[p.sc]}${detail}. Not verified.` });
+      }
     }
     if (keep.length) passes.push({ ...p, route: Array.isArray(p.route) ? keep : keep[0] });
   }
   return { passes, moved };
+}
+
+/** Back-compat wrapper for keyboard-only coverage. */
+export function enforceKeyboardCoverage(report, { keys, tabbables }) {
+  const evidence = Object.fromEntries(Object.entries(keys).map(([p, tabs]) => [p, { tabs, snapshots: 0, widths: [], reducedMotion: false, textSpacing: false }]));
+  const kb = { ...report, passes: (report.passes || []).filter((p) => KEYBOARD_SC.includes(p.sc)) };
+  const res = enforceCoverage(kb, { evidence, tabbables });
+  return { passes: [...res.passes, ...(report.passes || []).filter((p) => !KEYBOARD_SC.includes(p.sc))], moved: res.moved };
 }

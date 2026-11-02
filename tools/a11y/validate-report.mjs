@@ -19,7 +19,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { criterion, isMain, loadCatalog, loadConfig, parseArgs, readJson, REPO_ROOT, reportDir, writeJson } from "./lib/common.mjs";
-import { checkSession, enforceKeyboardCoverage, keyPressesByPath } from "./lib/session.mjs";
+import { BLOCKERS, checkSession, enforceCoverage, pageEvidence, PROCEDURAL } from "./lib/session.mjs";
 
 const args = parseArgs();
 const config = loadConfig();
@@ -159,6 +159,13 @@ export function validate(report, { impact, axe, catalog, checklist }) {
     if (!isSc(n.sc)) errors.push(`unknown criterion ${n.sc} in notApplicable/needsHuman`);
     if (!String(n.reason || "").trim()) errors.push(`${n.sc} on ${n.route} needs a reason`);
   }
+  // Procedural criteria are tests the agent can run; deferring one to a human needs a real blocker.
+  for (const n of report.needsHuman || []) {
+    if (n.downgraded) errors.push(`${n.sc} on ${n.route}: "downgraded" is set by the validator only`);
+    else if (PROCEDURAL[n.sc] && !BLOCKERS.includes(n.blocker)) {
+      errors.push(`${n.sc} on ${n.route} is in needsHuman without a blocker (${BLOCKERS.join(", ")}); this is a test you can run (${PROCEDURAL[n.sc]}), so run it and record a pass or a finding`);
+    }
+  }
   for (const f of rejected) errors.push(`finding ${f.id} rejected: ${f.rejectedBecause.join("; ")}`);
 
   return { findings, rejected, errors, warnings };
@@ -186,21 +193,21 @@ function main() {
       const text = fs.readFileSync(sessionPath, "utf8");
       session = checkSession(text, { routesTested });
       res.errors.push(...session.errors.map((e) => `browser use: ${e}`));
-      // Keyboard passes count only where the agent pressed Tab through the whole page.
+      // Procedural passes count only where the session log shows the work on that page.
       const tabbables = {};
       for (const pg of axe?.pages || []) if (pg.facts?.tabbableCount != null && tabbables[pg.path] == null) tabbables[pg.path] = pg.facts.tabbableCount;
       const mount = Object.values(config.apps)[0]?.mountPath || "/app";
-      const keys = keyPressesByPath(text, mount);
-      const { passes, moved } = enforceKeyboardCoverage(report, { keys, tabbables });
+      const evidence = pageEvidence(text, mount);
+      const { passes, moved } = enforceCoverage(report, { evidence, tabbables });
       report.passes = passes;
       report.needsHuman = [...(report.needsHuman || []), ...moved];
-      session.tabPresses = keys;
-      if (moved.length) res.warnings.push(`${moved.length} keyboard passes moved to needsHuman: the agent did not Tab through the whole page`);
+      session.evidence = evidence;
+      if (moved.length) res.warnings.push(`${moved.length} passes moved to needsHuman: the session log does not show the testing they need`);
     } else if (routesTested) {
       res.errors.push(`browser use: no session transcript at ${args.session}, so live testing cannot be confirmed`);
     }
   }
-  const result = { ...report, findings: res.findings, rejected: res.rejected, validation: { errors: res.errors, warnings: res.warnings, browserCalls: session?.counts, tabPresses: session?.tabPresses, validatedAt: new Date().toISOString() } };
+  const result = { ...report, findings: res.findings, rejected: res.rejected, validation: { errors: res.errors, warnings: res.warnings, browserCalls: session?.counts, evidence: session?.evidence, validatedAt: new Date().toISOString() } };
   writeJson(path.join(out, "validated.json"), result);
   for (const w of res.warnings) console.log(`warning: ${w}`);
   for (const e of res.errors) console.log(`error: ${e}`);

@@ -208,17 +208,30 @@
   }
 
   /** Apply the WCAG 1.4.12 text spacing values and list elements whose text is now clipped or overlapping. */
+  // Suma's Content Security Policy blocks <style> elements, so apply the spacing through a
+  // constructed stylesheet (CSSOM, which CSP allows) and verify that it took effect.
+  let spacingSheet;
   function textSpacing(on = true) {
-    let style = document.getElementById("__a11y_text_spacing");
-    if (!on) { style?.remove(); return { removed: true }; }
-    if (!style) {
-      style = document.createElement("style");
-      style.id = "__a11y_text_spacing";
-      style.textContent = "*:not(#__a11y_overlay){line-height:1.5!important;letter-spacing:0.12em!important;word-spacing:0.16em!important}p{margin-bottom:2em!important}";
-      document.head.appendChild(style);
+    if (!on) {
+      if (spacingSheet) document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== spacingSheet);
+      return { removed: true };
     }
-    return { applied: true, clipped: clippedText() };
+    const sample = [...document.querySelectorAll("main p, main li, main span, main a, p, li")].find((e) => e.textContent.trim());
+    const before = sample && parseFloat(getComputedStyle(sample).letterSpacing);
+    if (!spacingSheet) {
+      spacingSheet = new CSSStyleSheet();
+      spacingSheet.replaceSync("*:not(#__a11y_overlay){line-height:1.5!important;letter-spacing:0.12em!important;word-spacing:0.16em!important}p{margin-bottom:2em!important}");
+    }
+    if (!document.adoptedStyleSheets.includes(spacingSheet)) document.adoptedStyleSheets = [...document.adoptedStyleSheets, spacingSheet];
+    let verified = false;
+    if (sample) {
+      const cs = getComputedStyle(sample);
+      verified = Math.abs(parseFloat(cs.letterSpacing) - 0.12 * parseFloat(cs.fontSize)) < 0.5 && parseFloat(cs.letterSpacing) !== before;
+    }
+    if (!verified) return { applied: false, error: "The text spacing override did not take effect; do not record 1.4.12 from this call." };
+    return { applied: true, verified: true, sample: describe(sample), clipped: clippedText() };
   }
+
 
   // Screen-reader-only text (Bootstrap .visually-hidden and similar) is clipped on purpose.
   const srOnly = (el, cs) => el.clientWidth <= 1 || el.clientHeight <= 1 || (cs.clip && cs.clip !== "auto") || /inset\(50%\)/.test(cs.clipPath) || el.closest(".visually-hidden,.visually-hidden-focusable,.sr-only,#__a11y_overlay");

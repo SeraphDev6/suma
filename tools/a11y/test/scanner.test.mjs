@@ -7,7 +7,7 @@ import { MARKER, replaceStatus, statusBlock, testedSha, testedShaMarker } from "
 import { loadCatalog, reportDir } from "../lib/common.mjs";
 import { parseImports, resolveImport } from "../lib/graph.mjs";
 import { parseImportBindings, parseRoutes } from "../lib/routes.mjs";
-import { checkSession, enforceKeyboardCoverage, keyPressesByPath } from "../lib/session.mjs";
+import { checkSession, enforceCoverage, enforceKeyboardCoverage, keyPressesByPath, pageEvidence } from "../lib/session.mjs";
 import { previewBody } from "../preview.mjs";
 import { spreadsChildren } from "../static-scan.mjs";
 import { MEASURED, validate } from "../validate-report.mjs";
@@ -175,5 +175,41 @@ test("keyboard passes without a full Tab pass move to needsHuman", () => {
   const { passes, moved } = enforceKeyboardCoverage(report, { keys: { "/funding": 12, "/sitemap": 2, "/food/7": 10 }, tabbables: { "/funding": 12, "/sitemap": 30 } });
   assert.deepEqual(passes.map((p) => [p.sc, p.route]), [["2.1.1", ["/funding", "/food/:id"]], ["1.4.3", "/funding"]]);
   assert.equal(moved.length, 1);
-  assert.match(moved[0].reason, /2 Tab presses on a page with 30 focusable elements \(needs 30\)/);
+  assert.match(moved[0].reason, /2 Tab presses on a page with 30 Tab stops/);
+  const home = enforceKeyboardCoverage({ passes: [{ sc: "2.4.3", app: "webapp", route: "/" }] }, { keys: { "/": 4, "/funding": 9 }, tabbables: { "/": 4 } });
+  assert.equal(home.moved.length, 0, "the home page gets credit for its own presses");
+});
+
+test("resize, motion, spacing and snapshots are tracked per page and back passes", () => {
+  const blk = (srv, tool, args = "", url = "") => `### \`${srv}-${tool}\`\n\n\`\`\`json\n{ ${args} }\n\`\`\`\n</details>\n${url ? `- Page URL: ${url}\n` : ""}`;
+  const log = [
+    blk("playwright", "browser_navigate", `"url": "http://localhost:22001/app/funding"`, "http://localhost:22001/app/funding"),
+    blk("playwright", "browser_snapshot", "", "http://localhost:22001/app/funding"),
+    blk("playwright", "browser_resize", `"width": 320, "height": 640`),
+    blk("playwright", "browser_evaluate", `"function": "() => window.__a11y.textSpacing(true)"`),
+    blk("playwright", "browser_emulate_media", `"reducedMotion": "reduce"`),
+    blk("playwright", "browser_navigate", `"url": "http://localhost:22001/app/trips"`, "http://localhost:22001/app/trips"),
+  ].join("\n");
+  const ev = pageEvidence(log);
+  assert.deepEqual(ev["/funding"], { tabs: 0, snapshots: 1, widths: [1280, 320], reducedMotion: true, textSpacing: true });
+  assert.deepEqual(ev["/trips"].widths, [320], "the viewport carries over to the next page");
+  assert.equal(ev["/trips"].snapshots, 0);
+  const pass = (sc) => ({ sc, app: "webapp", route: ["/funding", "/trips"], method: "m", evidence: "e" });
+  const { passes, moved } = enforceCoverage({ passes: ["1.4.10", "1.4.12", "4.1.2", "1.4.3"].map(pass) }, { evidence: ev });
+  assert.deepEqual(passes.map((p) => [p.sc, p.route]), [["1.4.10", ["/funding", "/trips"]], ["1.4.12", ["/funding"]], ["4.1.2", ["/funding"]], ["1.4.3", ["/funding", "/trips"]]]);
+  assert.deepEqual(moved.map((m) => [m.sc, m.route, m.downgraded]), [["1.4.12", "/trips", true], ["4.1.2", "/trips", true]]);
+});
+
+test("procedural needsHuman entries need a blocker", () => {
+  const report = { routes: [], findings: [], passes: [], notApplicable: [], dismissedLeads: [], needsHuman: [
+    { sc: "1.4.10", app: "webapp", route: "/trips", reason: "only tested on /sitemap" },
+    { sc: "1.4.10", app: "webapp", route: "/order/:id", blocker: "unreachable", reason: "no orders in the demo data" },
+    { sc: "3.1.5", app: "webapp", route: "/trips", reason: "reading level needs judgement" },
+    { sc: "2.1.1", app: "webapp", route: "/x", downgraded: true, reason: "agent set this" },
+  ] };
+  const errs = validate(report, { impact: null, axe: null, catalog: loadCatalog(), checklist: [] }).errors.join("\n");
+  assert.match(errs, /1\.4\.10 on \/trips is in needsHuman without a blocker/);
+  assert.doesNotMatch(errs, /order\/:id/);
+  assert.doesNotMatch(errs, /3\.1\.5/);
+  assert.match(errs, /"downgraded" is set by the validator only/);
 });

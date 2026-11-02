@@ -109,7 +109,7 @@ function markdown() {
     if (!list?.length) return;
     lines.push(`<details><summary>${title} (${list.length})</summary>`, "", ...list.map(row), "", "</details>", "");
   };
-  section("Needs a human", v.needsHuman, (n) => `- ${scLink(n.sc)} on ${routesOf(n).map((r) => `\`${r}\``).join(" ")}: ${mdEscape(n.reason)}`);
+  section("Needs a human", v.needsHuman, (n) => `- ${scLink(n.sc)} on ${routesOf(n).map((r) => `\`${r}\``).join(" ")}${n.downgraded ? " (**not verified**)" : n.blocker ? ` (${n.blocker})` : ""}: ${mdEscape(n.reason)}`);
   section("Not applicable", v.notApplicable, (n) => `- ${scLink(n.sc)} on ${routesOf(n).map((r) => `\`${r}\``).join(" ")}: ${mdEscape(n.reason)}`);
   section("Automated leads dismissed after live testing", v.dismissedLeads, (d) => `- ${d.leadId}: ${mdEscape(d.reason)} Evidence: ${mdEscape(d.evidence)}`);
   section("Claims rejected by the validator (not reported as failures)", v.rejected, (r) => `- ${r.id} ${mdEscape(r.title)} (${(r.sc || []).join(", ")}): ${mdEscape(r.rejectedBecause.join("; "))}`);
