@@ -1,0 +1,8 @@
+[      27ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[      27ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'battery'. @ :0
+[      27ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'document-domain'. @ :0
+[      27ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'execution-while-not-rendered'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'execution-while-out-of-viewport'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'navigation-override'. @ :0
+[      28ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'web-share'. @ :0
+[   32976ms] [ERROR] Applying inline style violates the following Content Security Policy directive 'default-src 'self' mysuma.org *.mysuma.org'. Either the 'unsafe-inline' keyword, a hash ('sha256-a/Rk4i45vARqQeWD7gJpcSv8rnnlqpa4ESUw8mFklKI='), or a nonce ('nonce-...') is required to enable inline execution. Note also that 'style-src' was not explicitly set, so 'default-src' is used as a fallback. The action has been blocked. @ /home/runner/work/suma/suma/a11y-report/.mcp/init.js:231

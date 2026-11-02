@@ -1,0 +1,66 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e5]:
+    - navigation "Main menu" [ref=e7]:
+      - generic [ref=e8]:
+        - link "Suma, Home" [ref=e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=e10]
+          - paragraph [ref=e11]: Suma
+        - status [aria-hidden] [ref=e12]:
+          - generic [aria-hidden] [ref=e13]: 
+          - generic [ref=e14]: You are offline
+        - button "Open menu" [ref=e15] [cursor=pointer]
+      - text:                 
+    - main [ref=e19]:
+      - generic [ref=e22]:
+        - navigation "Breadcrumb" [ref=e23]:
+          - list [ref=e24]:
+            - listitem [ref=e25]:
+              - button "Back to the previous page" [ref=e26] [cursor=pointer]:
+                - generic [aria-hidden] [ref=e27]: 
+                - text: Back
+            - listitem
+        - heading "Add Your Card" [level=1] [ref=e28]
+        - paragraph [ref=e29]:
+          - text: We protect your financial information with
+          - strong [ref=e30]: bank-level encryption
+          - text: . It is
+          - strong [ref=e31]: never shared without your consent
+          - text: . Read
+          - link "Suma's Privacy Policy (opens in a new window)" [ref=e32] [cursor=pointer]:
+            - /url: https://app.mysuma.org/privacy-policy
+            - text: Suma's Privacy Policy
+            - generic [ref=e33]: (opens in a new window)
+          - text: to learn how we protect and use your financial information.
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: Fields marked * are required
+          - generic [ref=e37]:
+            - generic [ref=e38]: Name *
+            - textbox "Name" [active] [ref=e39]
+            - generic [ref=e40]: Name as printed on the card
+          - generic [ref=e42]:
+            - generic [ref=e43]: Card Number *
+            - textbox "Card Number" [ref=e44]
+            - generic [ref=e45]: The long number on the front of your card
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - generic [ref=e48]: Expiry (MM / YY) *
+              - textbox "Expiry (MM / YY)" [ref=e49]: 04 / 29
+              - generic [ref=e50]: Month and year, for example 04 / 29
+            - generic [ref=e51]:
+              - generic [ref=e52]: Security code (CVC) *
+              - textbox "Security code (CVC)" [ref=e53]: "123"
+              - generic [ref=e54]: 3 digits on the back of the card, or 4 on the front for American Express
+          - generic [ref=e56]:
+            - button "Back" [ref=e57] [cursor=pointer]
+            - button "Continue" [ref=e58] [cursor=pointer]
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e66]: •••• •••• •••• ••••
+              - generic [ref=e67]: YOUR NAME HERE
+              - generic [ref=e68]:
+                - generic [ref=e69]: valid thru
+                - generic [ref=e70]: 04 / 29
+            - generic [ref=e72]: "123"

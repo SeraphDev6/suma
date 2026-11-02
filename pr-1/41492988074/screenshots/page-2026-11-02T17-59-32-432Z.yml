@@ -1,0 +1,27 @@
+- generic [ref=f5e3]:
+  - link "Skip to main content" [ref=f5e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f5e5]:
+    - navigation "Main menu" [ref=f5e7]:
+      - generic [ref=f5e8]:
+        - link "Suma, Home" [ref=f5e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f5e10]
+          - paragraph [ref=f5e11]: Suma
+        - status [aria-hidden] [ref=f5e12]:
+          - generic [aria-hidden] [ref=f5e13]: 
+          - generic [ref=f5e14]: You are offline
+        - button "Open menu" [ref=f5e15] [cursor=pointer]
+      - text:                 
+    - main [ref=f5e19]:
+      - generic [ref=f5e20]:
+        - navigation "Breadcrumb" [ref=f5e21]:
+          - list [ref=f5e22]:
+            - listitem [ref=f5e23]:
+              - button "Back to Food" [ref=f5e24] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f5e25]: 
+                - text: Back
+            - listitem
+        - heading "Order History" [level=1] [ref=f5e26]
+      - status [ref=f5e28]:
+        - generic [ref=f5e31]: Loading
