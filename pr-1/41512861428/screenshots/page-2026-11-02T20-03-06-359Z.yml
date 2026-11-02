@@ -1,0 +1,16 @@
+- generic [ref=f3e3]:
+  - link "Saltar al contenido principal" [ref=f3e4] [cursor=pointer]:
+    - /url: "#main"
+  - main [ref=f3e6]:
+    - generic [ref=f3e8]:
+      - img "Logo de suma que muestra una mazorca de maíz encima de una moneda, todo dentro de un círculo y sombreado en dorado." [ref=f3e9]
+      - heading "¡Bienvenido a Suma!" [level=1] [ref=f3e10]
+      - generic [ref=f3e11]:
+        - button "Continuar" [ref=f3e12] [cursor=pointer]
+        - button "Más información sobre suma (se abre en una ventana nueva)" [ref=f3e13] [cursor=pointer]:
+          - text: Más información
+          - generic [ref=f3e14]: sobre suma
+          - generic [ref=f3e15]: (se abre en una ventana nueva)
+          - generic [aria-hidden] [ref=f3e16]: 
+        - button "English" [ref=f3e18] [cursor=pointer]:
+          - generic [aria-hidden] [ref=f3e19]: 

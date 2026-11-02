@@ -1,0 +1,99 @@
+- generic [ref=f10e124]:
+  - link "Skip to main content" [ref=f10e125] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f10e126]:
+    - navigation "Main menu" [ref=f10e128]:
+      - generic [ref=f10e129]:
+        - link "Suma, Home" [ref=f10e130] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f10e131]
+          - paragraph [ref=f10e132]: Suma
+        - status [aria-hidden] [ref=f10e133]:
+          - generic [aria-hidden] [ref=f10e134]: 
+          - generic [ref=f10e135]: You are offline
+        - button "Open menu" [ref=f10e136] [cursor=pointer]
+      - text:                 
+    - main [active] [ref=f10e140]:
+      - generic [ref=f10e141]:
+        - navigation "Breadcrumb" [ref=f10e143]:
+          - list [ref=f10e144]:
+            - listitem [ref=f10e145]:
+              - button "Back to Shopping Cart" [ref=f10e146] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f10e147]: 
+                - text: Back
+            - listitem
+        - generic [ref=f10e148]:
+          - group "How are you paying?" [ref=f10e150]:
+            - generic [ref=f10e152]:
+              - generic [ref=f10e153]: Link a new payment method to pay for this order.
+              - link "Add debit/credit card" [ref=f10e154] [cursor=pointer]:
+                - /url: /app/add-card?returnToImmediate=/checkout/1
+                - generic [aria-hidden] [ref=f10e155]: 
+                - text: Add debit/credit card
+              - link "Link bank account" [ref=f10e156] [cursor=pointer]:
+                - /url: /app/link-bank-account?returnTo=/checkout/1
+                - generic [aria-hidden] [ref=f10e157]: 
+                - text: Link bank account
+          - separator [ref=f10e158]
+          - group "How do you want to get your stuff?" [ref=f10e160]:
+            - generic [ref=f10e162]:
+              - radio "Pickup at Market (Dec 21-22)Address 409 SE Martin Luther King Jr Blvd, Portland, Oregon, 97214, US, open in maps (opens in a new window)" [ref=f10e163]
+              - generic [ref=f10e164]:
+                - text: Pickup at Market (Dec 21-22)
+                - link "Address 409 SE Martin Luther King Jr Blvd, Portland, Oregon, 97214, US, open in maps (opens in a new window)" [ref=f10e165] [cursor=pointer]:
+                  - /url: https://www.google.com/maps/place/409 SE Martin Luther King Jr Blvd, Portland, Oregon, 97214, US
+                  - generic [aria-hidden] [ref=f10e166]: 
+                  - text: Address
+                  - generic [ref=f10e167]: 409 SE Martin Luther King Jr Blvd, Portland, Oregon, 97214, US, open in maps
+                  - generic [ref=f10e168]: (opens in a new window)
+                  - generic [aria-hidden] [ref=f10e169]: 
+            - generic [ref=f10e170]:
+              - radio "Pickup at Community Location (Dec 21-22)" [ref=f10e171]
+              - generic [ref=f10e172]: Pickup at Community Location (Dec 21-22)
+          - separator [ref=f10e173]
+          - generic [ref=f10e174]:
+            - heading "My cart" [level=2] [ref=f10e175]
+            - generic [ref=f10e176]:
+              - generic [ref=f10e177]:
+                - heading "Roasted Turkey Dinner, feeds 4-6" [level=6] [ref=f10e178]
+                - paragraph [ref=f10e179]: From Local Market
+                - generic [ref=f10e180]: "Quantity: 1"
+              - generic [ref=f10e183]:
+                - generic [ref=f10e184]: $90.00
+                - generic [ref=f10e185]: $180.00
+            - link "Edit quantities" [ref=f10e187] [cursor=pointer]:
+              - /url: /app/cart/1
+              - generic [aria-hidden] [ref=f10e188]: 
+              - text: Edit quantities
+          - separator [ref=f10e189]
+          - generic [ref=f10e190]:
+            - heading "Order summary" [level=2] [ref=f10e191]
+            - generic [ref=f10e192]:
+              - paragraph [ref=f10e193]:
+                - generic [ref=f10e194]: "Items (1):"
+                - generic [ref=f10e195]: $180.00
+              - paragraph [ref=f10e196]:
+                - generic [ref=f10e197]: "Handling:"
+                - generic [ref=f10e198]: $0.00
+              - paragraph [ref=f10e199]:
+                - generic [ref=f10e200]: "Total savings:"
+                - generic [ref=f10e201]: "-$90.00"
+              - separator [ref=f10e202]
+              - paragraph [ref=f10e203]:
+                - generic [ref=f10e204]: "Total before tax:"
+                - generic [ref=f10e205]: $90.00
+              - paragraph [ref=f10e206]:
+                - generic [ref=f10e207]: "Tax:"
+                - generic [ref=f10e208]: $0.00
+              - separator [ref=f10e209]
+              - paragraph [ref=f10e210]:
+                - generic [ref=f10e211]: "To be charged:"
+                - generic [ref=f10e212]: $90.00
+              - paragraph [ref=f10e213]:
+                - text: By clicking "place order" you agree to suma's
+                - link "Terms of Use (opens in a new window)" [ref=f10e214] [cursor=pointer]:
+                  - /url: /terms-of-use
+                  - text: Terms of Use
+                  - generic [ref=f10e215]: (opens in a new window)
+                - text: .
+              - button "Place order" [ref=f10e218] [cursor=pointer]

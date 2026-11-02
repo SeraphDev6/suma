@@ -1,0 +1,54 @@
+- generic [ref=f16e8]:
+  - link "Skip to main content" [ref=f16e9] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f16e10]:
+    - navigation "Main menu" [ref=f16e12]:
+      - generic [ref=f16e13]:
+        - link "Suma, Home" [ref=f16e14] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f16e15]
+          - paragraph [ref=f16e16]: Suma
+        - status [aria-hidden] [ref=f16e17]:
+          - generic [aria-hidden] [ref=f16e18]: 
+          - generic [ref=f16e19]: You are offline
+        - button "Open menu" [ref=f16e20] [cursor=pointer]
+      - text:                 
+    - main [ref=f16e24]:
+      - generic [ref=f16e27]:
+        - navigation "Breadcrumb" [ref=f16e28]:
+          - list [ref=f16e29]:
+            - listitem [ref=f16e30]:
+              - button "Back to the previous page" [ref=f16e31] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f16e32]: 
+                - text: Back
+            - listitem
+        - heading "Payment Accounts" [level=1] [ref=f16e33]
+        - paragraph [ref=f16e34]:
+          - text: To add money to your account, you'll need at least one
+          - link "funding source" [ref=f16e35] [cursor=pointer]:
+            - /url: /app/glossary#glossary-funding_source
+          - text: . Usually this is a bank account, but other options maybe available to you below.
+        - paragraph [ref=f16e36]:
+          - text: We protect your financial information with
+          - strong [ref=f16e37]: bank-level encryption
+          - text: . It is
+          - strong [ref=f16e38]: never shared without your consent
+          - text: . Read
+          - link "Suma's Privacy Policy (opens in a new window)" [ref=f16e39] [cursor=pointer]:
+            - /url: https://app.mysuma.org/privacy-policy
+            - text: Suma's Privacy Policy
+            - generic [ref=f16e40]: (opens in a new window)
+          - text: to learn how we protect and use your financial information.
+        - generic [ref=f16e41]:
+          - heading "Bank Accounts" [level=2] [ref=f16e43]
+          - generic [ref=f16e44]:
+            - paragraph [ref=f16e45]: You don't have any bank accounts linked.
+            - button "Link bank account" [ref=f16e46] [cursor=pointer]
+        - generic [ref=f16e47]:
+          - heading "Cards" [level=2] [ref=f16e49]
+          - generic [ref=f16e50]:
+            - paragraph [ref=f16e51]: You don't have any credit or debit cards linked.
+            - button "Add Your Card" [ref=f16e52] [cursor=pointer]
+        - generic [ref=f16e53]:
+          - heading "Other Sources" [level=2] [ref=f16e55]
+          - paragraph [ref=f16e57]: Support is coming for additional sources, such as cash, money order, and adding funds through a friend.

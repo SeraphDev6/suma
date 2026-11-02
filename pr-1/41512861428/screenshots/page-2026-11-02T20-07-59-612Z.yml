@@ -1,0 +1,48 @@
+- generic [ref=f9e115]:
+  - link "Skip to main content" [ref=f9e116] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f9e117]:
+    - generic [ref=f9e118]:
+      - navigation "Main menu" [ref=f9e119]:
+        - generic [ref=f9e120]:
+          - link "Suma, Home" [ref=f9e121] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f9e122]
+            - paragraph [ref=f9e123]: Suma
+          - status [aria-hidden] [ref=f9e124]:
+            - generic [aria-hidden] [ref=f9e125]: 
+            - generic [ref=f9e126]: You are offline
+          - button "Open menu" [ref=f9e127] [cursor=pointer]
+        - text:                 
+      - navigation "Sections" [ref=f9e131]:
+        - link "Home" [ref=f9e132] [cursor=pointer]:
+          - /url: /app/dashboard
+        - link "Mobility" [ref=f9e133] [cursor=pointer]:
+          - /url: /app/mobility
+        - link "Food" [ref=f9e134] [cursor=pointer]:
+          - /url: /app/food
+        - link "Utilities" [ref=f9e135] [cursor=pointer]:
+          - /url: /app/utilities
+    - main [active] [ref=f9e136]:
+      - img "Market stand showing fresh fruit and vegetables." [ref=f9e137]
+      - generic [ref=f9e138]:
+        - heading "Food" [level=1] [ref=f9e139]
+        - paragraph [ref=f9e140]: Suma wants to make it easy for you to save money on food. You can shop at a big chain, the corner store or an organic market.
+      - separator [ref=f9e141]
+      - generic [ref=f9e142]:
+        - heading "Current Offerings" [level=2] [ref=f9e143]
+        - generic [ref=f9e144]:
+          - generic [ref=f9e147]:
+            - link [aria-hidden] [ref=f9e148] [cursor=pointer]:
+              - /url: /app/food/1
+            - generic [ref=f9e149]:
+              - link "Holidays Demo" [ref=f9e150] [cursor=pointer]:
+                - /url: /app/food/1
+              - paragraph [ref=f9e151]: Until Nov 2, 2027
+          - generic [ref=f9e154]:
+            - link [aria-hidden] [ref=f9e155] [cursor=pointer]:
+              - /url: /app/food/2
+            - generic [ref=f9e156]:
+              - link "‌Demo Farmers Market Ride & Shop" [ref=f9e157] [cursor=pointer]:
+                - /url: /app/food/2
+              - paragraph [ref=f9e158]: Until Nov 2, 2027

@@ -1,0 +1,56 @@
+- generic [ref=f10e3]:
+  - link "Skip to main content" [ref=f10e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f10e5]:
+    - generic [ref=f10e6]:
+      - navigation "Main menu" [ref=f10e7]:
+        - generic [ref=f10e8]:
+          - link "Suma, Home" [ref=f10e9] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f10e10]
+            - paragraph [ref=f10e11]: Suma
+          - status [aria-hidden] [ref=f10e12]:
+            - generic [aria-hidden] [ref=f10e13]: 
+            - generic [ref=f10e14]: You are offline
+          - button "Open menu" [ref=f10e15] [cursor=pointer]
+        - text:                 
+      - button "Cart, 1 items" [ref=f10e59] [cursor=pointer]:
+        - generic [ref=f10e27]:
+          - generic [ref=f10e28]:
+            - generic [aria-hidden] [ref=f10e29]: 
+            - text: "1"
+          - status [ref=f10e31]
+    - main [ref=f10e19]:
+      - generic [ref=f10e20]:
+        - generic [ref=f10e32]:
+          - navigation "Breadcrumb" [ref=f10e33]:
+            - list [ref=f10e34]:
+              - listitem [ref=f10e35]:
+                - button "Back to Food" [ref=f10e36] [cursor=pointer]:
+                  - generic [aria-hidden] [ref=f10e37]: 
+                  - text: Back
+              - listitem
+          - heading "Roasted Turkey Dinner, feeds 4-6" [level=1] [ref=f10e38]
+        - generic [ref=f10e40]:
+          - generic [ref=f10e42]:
+            - generic [ref=f10e43]:
+              - generic [ref=f10e44]: $90.00
+              - generic [ref=f10e45]: $180.00
+            - paragraph [ref=f10e46]: $90.00 discount from Local Market
+          - generic [ref=f10e48]:
+            - group "Roasted Turkey Dinner, feeds 4-6" [ref=f10e49]:
+              - button [ref=f10e60] [cursor=pointer]:
+                - 'img "Remove from cart: Roasted Turkey Dinner, feeds 4-6" [ref=f10e61]'
+              - group "1" [ref=f10e62]:
+                - 'button "Quantity: 1, Roasted Turkey Dinner, feeds 4-6" [ref=f10e63] [cursor=pointer]': "1"
+              - 'button "Add to cart: Roasted Turkey Dinner, feeds 4-6" [disabled]':
+                - 'img "Add to cart: Roasted Turkey Dinner, feeds 4-6"'
+            - status [ref=f10e52]: "Quantity: 1, Roasted Turkey Dinner, feeds 4-6"
+            - generic [ref=f10e64]:
+              - generic [ref=f10e65]: Item subtotal
+              - text: $90.00
+        - separator [ref=f10e53]
+        - generic [ref=f10e55]:
+          - heading "From Local Market" [level=2] [ref=f10e56]
+          - heading "Details" [level=2] [ref=f10e57]
+          - generic [ref=f10e58]: Roasted Turkey, Stuffing, Buttermilk Mashed Potatoes, Gravy, Dinner Rolls, Roasted Green Beans, Pumpkin Pie
