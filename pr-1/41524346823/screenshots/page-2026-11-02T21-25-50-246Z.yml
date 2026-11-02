@@ -1,0 +1,65 @@
+- generic [ref=f12e51]:
+  - link "Skip to main content" [ref=f12e52] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f12e53]:
+    - generic [ref=f12e54]:
+      - navigation "Main menu" [ref=f12e55]:
+        - generic [ref=f12e56]:
+          - link "Suma, Home" [ref=f12e57] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f12e58]
+            - paragraph [ref=f12e59]: Suma
+          - status [aria-hidden] [ref=f12e60]:
+            - generic [aria-hidden] [ref=f12e61]: 
+            - generic [ref=f12e62]: You are offline
+          - button "Open menu" [ref=f12e63] [cursor=pointer]
+        - text:                 
+      - navigation "Sections" [ref=f12e67]:
+        - link "Home" [ref=f12e68] [cursor=pointer]:
+          - /url: /app/dashboard
+        - link "Mobility" [ref=f12e69] [cursor=pointer]:
+          - /url: /app/mobility
+        - link "Food" [ref=f12e70] [cursor=pointer]:
+          - /url: /app/food
+        - link "Utilities" [ref=f12e71] [cursor=pointer]:
+          - /url: /app/utilities
+      - button "Cart, 0 items" [ref=f12e73] [cursor=pointer]:
+        - generic [ref=f12e74]:
+          - generic [ref=f12e75]:
+            - generic [aria-hidden] [ref=f12e76]: 
+            - text: "0"
+          - status [ref=f12e78]
+    - main [active] [ref=f12e79]:
+      - generic [ref=f12e80]:
+        - navigation "Breadcrumb" [ref=f12e82]:
+          - list [ref=f12e83]:
+            - listitem [ref=f12e84]:
+              - button "Back to Food" [ref=f12e85] [cursor=pointer]:
+                - generic [aria-hidden] [ref=f12e86]: 
+            - listitem [ref=f12e87]:
+              - heading "Holidays Demo" [level=1] [ref=f12e88]
+        - generic [ref=f12e89]:
+          - generic [ref=f12e90]:
+            - heading "Roasted Turkey Dinner, feeds 4-6" [level=2] [ref=f12e91]
+            - paragraph [ref=f12e92]: Local Market
+            - generic [ref=f12e94]:
+              - generic [ref=f12e95]: $90.00
+              - generic [ref=f12e96]: $180.00
+            - link "Roasted Turkey Dinner, feeds 4-6":
+              - /url: /app/product/1/1
+          - generic [ref=f12e98]:
+            - heading "Glazed Ham Dinner, feeds 4-6" [level=2] [ref=f12e99]
+            - paragraph [ref=f12e100]: Local Market
+            - generic [ref=f12e102]:
+              - generic [ref=f12e103]: $90.00
+              - generic [ref=f12e104]: $180.00
+            - link "Glazed Ham Dinner, feeds 4-6":
+              - /url: /app/product/1/2
+          - generic [ref=f12e106]:
+            - heading "Vegan Field Roast Dinner, feeds 4-6" [level=2] [ref=f12e107]
+            - paragraph [ref=f12e108]: Local Market
+            - generic [ref=f12e110]:
+              - generic [ref=f12e111]: $90.00
+              - generic [ref=f12e112]: $180.00
+            - link "Vegan Field Roast Dinner, feeds 4-6":
+              - /url: /app/product/1/3

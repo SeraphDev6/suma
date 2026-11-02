@@ -1,0 +1,29 @@
+- generic [ref=f12e3]:
+  - link "Skip to main content" [ref=f12e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f12e5]:
+    - generic [ref=f12e6]:
+      - navigation "Main menu" [ref=f12e7]:
+        - generic [ref=f12e8]:
+          - link "Suma, Home" [ref=f12e9] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f12e10]
+            - paragraph [ref=f12e11]: Suma
+          - status [aria-hidden] [ref=f12e12]:
+            - generic [aria-hidden] [ref=f12e13]: 
+            - generic [ref=f12e14]: You are offline
+          - button "Open menu" [ref=f12e15] [cursor=pointer]
+        - text:                 
+      - navigation "Sections" [ref=f12e19]:
+        - link "Home" [ref=f12e20] [cursor=pointer]:
+          - /url: /app/dashboard
+        - link "Mobility" [ref=f12e21] [cursor=pointer]:
+          - /url: /app/mobility
+        - link "Food" [ref=f12e22] [cursor=pointer]:
+          - /url: /app/food
+        - link "Utilities" [ref=f12e23] [cursor=pointer]:
+          - /url: /app/utilities
+    - main [ref=f12e24]:
+      - img "Market stand showing fresh fruit and vegetables." [ref=f12e25]
+      - status [ref=f12e27]:
+        - generic [ref=f12e30]: Loading

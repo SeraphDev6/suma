@@ -1,0 +1,18 @@
+- generic [ref=f13e3]:
+  - link "Skip to main content" [ref=f13e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f13e5]:
+    - navigation "Main menu" [ref=f13e7]:
+      - generic [ref=f13e8]:
+        - link "Suma, Home" [ref=f13e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=f13e10]
+          - paragraph [ref=f13e11]: Suma
+        - status [aria-hidden] [ref=f13e12]:
+          - generic [aria-hidden] [ref=f13e13]: 
+          - generic [ref=f13e14]: You are offline
+        - button "Open menu" [ref=f13e15] [cursor=pointer]
+      - text:                 
+    - main [ref=f13e19]:
+      - status [ref=f13e21]:
+        - generic [ref=f13e24]: Loading

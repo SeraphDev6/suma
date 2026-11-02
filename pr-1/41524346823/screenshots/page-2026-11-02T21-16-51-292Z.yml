@@ -1,0 +1,96 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e5]:
+    - navigation "Main menu" [ref=e7]:
+      - generic [ref=e8]:
+        - link "Suma, Home" [ref=e9] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img "Suma logo showing an ear of corn on top of a coin, all within a circle and gold shaded." [ref=e10]
+          - paragraph [ref=e11]: Suma
+        - status [aria-hidden] [ref=e12]:
+          - generic [aria-hidden] [ref=e13]: 
+          - generic [ref=e14]: You are offline
+        - button "Open menu" [active] [ref=e15] [cursor=pointer]
+      - generic [ref=e63]:
+        - heading "Language" [level=2] [ref=e64]
+        - group "Language" [ref=e65]:
+          - button "English" [pressed] [ref=e66] [cursor=pointer]
+          - button "En Español" [ref=e67] [cursor=pointer]: Español
+        - generic [ref=e68]:
+          - heading "Display settings" [level=2] [ref=e69]
+          - generic [ref=e70]:
+            - checkbox "More spacing between lines and paragraphs" [ref=e71]
+            - generic [ref=e72]: More spacing between lines and paragraphs
+        - heading "Help and legal" [level=2] [ref=e73]
+        - generic [ref=e74]:
+          - generic [ref=e75]: © 2026 mysuma.org
+          - generic [ref=e76]:
+            - link "Instagram (opens in a new window)" [ref=e77] [cursor=pointer]:
+              - /url: https://www.instagram.com/mysuma/
+              - generic [aria-hidden] [ref=e78]: 
+            - link "LinkedIn (opens in a new window)" [ref=e79] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/mysuma/
+              - generic [aria-hidden] [ref=e80]: 
+        - link "Terms of Use" [ref=e82] [cursor=pointer]:
+          - /url: /app/terms-of-use
+        - link "Privacy Policy" [ref=e84] [cursor=pointer]:
+          - /url: /app/privacy-policy
+        - link "Glossary" [ref=e86] [cursor=pointer]:
+          - /url: /app/glossary
+        - link "Site Map" [ref=e88] [cursor=pointer]:
+          - /url: /app/sitemap
+        - link "Contact Us" [ref=e90] [cursor=pointer]:
+          - /url: mailto:info@mysuma.org
+    - main [ref=e19]:
+      - generic [ref=e22]:
+        - heading "Site Map" [level=1] [ref=e23]
+        - paragraph [ref=e24]: Links to the main pages in suma, in one place.
+        - region [ref=e25]:
+          - heading "Main sections" [level=2] [ref=e26]
+          - list [ref=e27]:
+            - listitem [ref=e28]:
+              - link "Home" [ref=e29] [cursor=pointer]:
+                - /url: /app/dashboard
+            - listitem [ref=e30]:
+              - link "Mobility" [ref=e31] [cursor=pointer]:
+                - /url: /app/mobility
+            - listitem [ref=e32]:
+              - link "Food" [ref=e33] [cursor=pointer]:
+                - /url: /app/food
+            - listitem [ref=e34]:
+              - link "Utilities" [ref=e35] [cursor=pointer]:
+                - /url: /app/utilities
+        - region [ref=e36]:
+          - heading "Your account" [level=2] [ref=e37]
+          - list [ref=e38]:
+            - listitem [ref=e39]:
+              - link "Payment Methods" [ref=e40] [cursor=pointer]:
+                - /url: /app/funding
+            - listitem [ref=e41]:
+              - link "Transaction History" [ref=e42] [cursor=pointer]:
+                - /url: /app/ledgers
+            - listitem [ref=e43]:
+              - link "Order History" [ref=e44] [cursor=pointer]:
+                - /url: /app/order-history
+            - listitem [ref=e45]:
+              - link "Claim Orders" [ref=e46] [cursor=pointer]:
+                - /url: /app/unclaimed-orders
+            - listitem [ref=e47]:
+              - link "Micromobility Trips" [ref=e48] [cursor=pointer]:
+                - /url: /app/trips
+            - listitem [ref=e49]:
+              - link "Preferences" [ref=e50] [cursor=pointer]:
+                - /url: /app/preferences
+        - region [ref=e51]:
+          - heading "About suma" [level=2] [ref=e52]
+          - list [ref=e53]:
+            - listitem [ref=e54]:
+              - link "Terms of Use" [ref=e55] [cursor=pointer]:
+                - /url: /app/terms-of-use
+            - listitem [ref=e56]:
+              - link "Privacy Policy" [ref=e57] [cursor=pointer]:
+                - /url: /app/privacy-policy
+            - listitem [ref=e58]:
+              - link "Glossary" [ref=e59] [cursor=pointer]:
+                - /url: /app/glossary
