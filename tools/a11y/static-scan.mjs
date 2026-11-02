@@ -136,7 +136,7 @@ function toSarif(findings) {
       fullDescription: { text: crits.map((c) => `${c.sc} ${c.title}: ${c.why}`).join("\n") || id },
       helpUri: crits[0]?.url,
       help: { text: crits.map((c) => `WCAG ${c.sc} ${c.title} (Level ${c.level}). ${c.why} ${c.url}`).join("\n\n") },
-      properties: { tags: ["accessibility", "WCAG2.2", ...crits.map((c) => `wcag-${c.sc}`), ...crits.map((c) => `level-${c.level}`)], confidence: sample.confidence },
+      properties: { tags: [...new Set(["accessibility", "WCAG2.2", ...crits.map((c) => `wcag-${c.sc}`), ...crits.map((c) => `level-${c.level}`)])], confidence: sample.confidence },
     };
   });
   return {
