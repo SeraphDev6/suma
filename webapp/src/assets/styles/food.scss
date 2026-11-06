@@ -7,8 +7,11 @@
   overflow-y: scroll;
 }
 
-.order-confirmation-spinner-duration {
-  animation-duration: 3s !important;
+// Not under "reduce motion": this would outrank the global rule in custom.scss (2.3.3).
+@media (prefers-reduced-motion: no-preference) {
+  .order-confirmation-spinner-duration {
+    animation-duration: 3s !important;
+  }
 }
 
 .cart-icon-loader {
@@ -27,5 +30,15 @@
 
   &.loading {
     opacity: 0;
+  }
+}
+// Keep the "Add to cart" label on one line where it fits, but let it wrap on
+// very narrow viewports so the layout reflows instead of overflowing (1.4.10).
+.food-cart-widget-btn {
+  white-space: nowrap;
+}
+@media (max-width: 359px) {
+  .food-cart-widget-btn {
+    white-space: normal;
   }
 }

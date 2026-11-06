@@ -8,7 +8,9 @@ import ScreenLoader from "../components/ScreenLoader";
 import { t } from "../localization";
 import idempotency from "../modules/idempotency";
 import { Logger } from "../shared/logger";
+import { formatMoney } from "../shared/money";
 import useAsyncFetch from "../shared/react/useAsyncFetch";
+import useToggle from "../shared/react/useToggle";
 import { extractErrorCode, useError } from "../state/useError";
 import useScreenLoader from "../state/useScreenLoader";
 import useUser from "../state/useUser";
@@ -16,8 +18,10 @@ import filter from "lodash/filter";
 import find from "lodash/find";
 import first from "lodash/first";
 import includes from "lodash/includes";
+import isNumber from "lodash/isNumber";
 import React from "react";
 import Form from "react-bootstrap/Form";
+import Modal from "react-bootstrap/Modal";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 const logger = new Logger("addfunds");
@@ -29,6 +33,7 @@ export default function FundingAddFunds() {
   const navigate = useNavigate();
   const [amountCents, setAmountCents] = React.useState(0);
   const [selectedCurrencyCode] = React.useState("");
+  const showConfirm = useToggle(false);
 
   const {
     state: currenciesResp,
@@ -79,6 +84,13 @@ export default function FundingAddFunds() {
       );
       return;
     }
+    // Money moves here, so ask for an explicit confirmation first (3.3.4).
+    showConfirm.turnOn();
+  };
+
+  const submitPayment = (e) => {
+    e.preventDefault();
+    showConfirm.turnOff();
     screenLoader.turnOn();
     idempotency.runAsync("add-funds", () =>
       api
@@ -121,6 +133,25 @@ export default function FundingAddFunds() {
     setError(null);
   }
 
+  const amount = { cents: amountCents, currency: selectedCurrency.code };
+  // Tell the member the limits before they submit, not only in the error (3.3.5 Help).
+  const hasLimits =
+    isNumber(selectedCurrency.fundingMinimumCents) &&
+    isNumber(selectedCurrency.fundingMaximumCents);
+  const amountLimitsHelp = hasLimits
+    ? t("forms.amount_limits_help", {
+        min: formatMoney({
+          cents: selectedCurrency.fundingMinimumCents,
+          currency: selectedCurrency.code,
+        }),
+        max: formatMoney({
+          cents: selectedCurrency.fundingMaximumCents,
+          currency: selectedCurrency.code,
+        }),
+      })
+    : null;
+  const addAmountLabel = t("forms.add_amount", { amount: formatMoney(amount) });
+
   return (
     <>
       <PageHeading>{t("payments.add_funds")}</PageHeading>
@@ -133,6 +164,7 @@ export default function FundingAddFunds() {
               whole
               cents={amountCents}
               onCentsChange={handleChange}
+              helpText={amountLimitsHelp}
             />
           </div>
         </div>
@@ -146,10 +178,34 @@ export default function FundingAddFunds() {
           primaryProps={{
             disabled: !amountCents,
             style: { minWidth: 120 },
-            children: t("forms.add_funds"),
+            children: amountCents ? addAmountLabel : t("forms.add_funds"),
           }}
         />
       </Form>
+      <Modal show={showConfirm.isOn} onHide={showConfirm.turnOff} centered>
+        <Modal.Header closeButton closeLabel={t("common.close")}>
+          <Modal.Title as="h5">{t("payments.confirm_add_funds_title")}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            {t("payments.confirm_add_funds_body", {
+              amount,
+              instrument: instrument.name,
+            })}
+          </p>
+          <FormButtons
+            variant="success"
+            primaryProps={{
+              children: addAmountLabel,
+              onClick: submitPayment,
+            }}
+            secondaryProps={{
+              children: t("common.cancel"),
+              onClick: showConfirm.turnOff,
+            }}
+          />
+        </Modal.Body>
+      </Modal>
     </>
   );
 }

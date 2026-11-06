@@ -1,0 +1,37 @@
+name: Copilot Setup Steps
+
+# Environment for the Copilot cloud agent. Lets you run the a11y-tester agent on demand from a pull
+# request (choose the a11y-tester agent, or ask @copilot to "run the a11y-tester agent on this PR").
+# It starts Suma, prepares the signed-in Playwright sessions, and runs the static scan, diff trace
+# and axe sweep, so the agent starts with the same inputs as the a11y-impact workflow.
+# Copilot only picks this up from the default branch, and the job must be named copilot-setup-steps.
+
+on:
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/copilot-setup-steps.yml]
+  pull_request:
+    paths: [.github/workflows/copilot-setup-steps.yml]
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Start Suma and prepare the browser sessions
+        uses: ./.github/actions/suma-a11y-env
+
+      - name: Prepare scanner inputs for the current branch
+        env:
+          A11Y_REPORT_DIR: a11y-report
+        run: |
+          git fetch --no-tags origin main
+          node tools/a11y/static-scan.mjs --fail-on none
+          node tools/a11y/impact.mjs --base origin/main --head HEAD
+          node tools/a11y/axe-sweep.mjs

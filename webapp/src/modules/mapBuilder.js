@@ -24,14 +24,30 @@ export default class MapBuilder {
       localStorageCache.setItem("mobilityMapCache", this._mapCache);
     };
     this._latOffset = 0.00004;
+    // Zoom, fade and inertia animations are not essential, so leave them off
+    // for users who prefer reduced motion (WCAG 2.3.3). Leaflet reads these when
+    // the map is created; everything else checks the preference on each use.
+    const reduceMotion = prefersReducedMotion();
     this._map = this._l.map(this.mapHost, {
       attributionControl: false,
       zoomControl: false,
+      zoomAnimation: !reduceMotion,
+      fadeAnimation: !reduceMotion,
+      markerZoomAnimation: !reduceMotion,
+      inertia: !reduceMotion,
     });
+    // Leaflet's keyboard handler pans with an animation and has no option
+    // to turn it off, so make every panBy honour the preference.
+    const panBy = this._map.panBy.bind(this._map);
+    this._map.panBy = (offset, options) =>
+      panBy(offset, prefersReducedMotion() ? { ...options, animate: false } : options);
     this._map.setView(
       [this._mapCache.lat || 45.5152, this._mapCache.lng || -122.6784],
       this._mapCache.zoom || this._minZoom
     );
+    // Leaflet inserts bottom-corner controls above earlier ones,
+    // so add the pan control first to have it sit under the zoom control.
+    this.newPanControl().addTo(this._map);
     this._l.control
       .zoom({
         position: "bottomright",
@@ -43,6 +59,7 @@ export default class MapBuilder {
     this.updateLastExtendedStaticBounds();
     this._restrictedAreasGroup = this._l.layerGroup();
     this._mcg = this._l.markerClusterGroup({
+      animate: !reduceMotion,
       spiderfyOnMaxZoom: false,
       showCoverageOnHover: false,
       maxClusterRadius: (mapZoom) => {
@@ -50,9 +67,14 @@ export default class MapBuilder {
         return mapZoom >= 17 ? 0 : 32;
       },
       iconCreateFunction: (cluster) => {
+        const count = cluster.getChildCount();
+        // Leaflet makes the cluster a focusable role=button, so give it an accessible name.
+        const label = t("mobility.cluster_label", { count });
         return this._l.divIcon({
-          html: "<b>" + cluster.getChildCount() + "</b>",
+          html: `<b aria-hidden="true">${count}</b><span class="visually-hidden">${label}</span>`,
           className: "mobility-map-cluster-icon",
+          // Keep in sync with .mobility-map-cluster-icon (WCAG 2.5.5).
+          iconSize: [44, 44],
         });
       },
     });
@@ -61,7 +83,12 @@ export default class MapBuilder {
     this._locationAccuracyCircle = null;
     this._animationTimeoutId = null;
     this._refreshId = null;
+    this._refreshPaused = false;
+    this._refreshControl = null;
+    this._onRefreshPausedChange = null;
     this._clickedVehicle = null;
+    // Marker that opened the drawer, so focus can go back to it when the drawer closes.
+    this._focusReturnVehicle = null;
     this._onVehicleClick = null;
     this._onSelectedVehicleRemoved = null;
   }
@@ -117,7 +144,9 @@ export default class MapBuilder {
         this._locationAccuracyCircle._path.classList.add(
           "mobility-location-accuracy-circle-transition"
         );
-        this.setLocationMarkerTransition("all 1000ms linear 0s");
+        this.setLocationMarkerTransition(
+          prefersReducedMotion() ? "none" : "all 1000ms linear 0s"
+        );
       }, 250);
     });
   }
@@ -137,6 +166,7 @@ export default class MapBuilder {
     this._map.on("moveend", this.moveEnd, this);
     this._map.on("zoomend", this.zoomEnd, this);
     this._map.on("click", this.click, this);
+    this._map.on("keydown", this.keyDown, this);
   }
 
   moveEnd() {
@@ -184,6 +214,17 @@ export default class MapBuilder {
   }
 
   /**
+   * Pointer users deselect a vehicle by clicking the map.
+   * Escape does the same while focus is on the map or a marker (WCAG 2.1.3).
+   */
+  keyDown(e) {
+    if (e.originalEvent?.key !== "Escape") {
+      return;
+    }
+    this.click();
+  }
+
+  /**
    * These handlers need to be set independently of any other side effects,
    * since the handler functions can change (ie via React.useCallback).
    */
@@ -193,20 +234,50 @@ export default class MapBuilder {
     return this;
   }
 
+  /**
+   * @param onPausedChange {function(boolean)} Called when the user pauses or resumes vehicle updates.
+   */
+  setRefreshEventHandlers({ onPausedChange }) {
+    this._onRefreshPausedChange = onPausedChange;
+    return this;
+  }
+
   loadScooters() {
     this.getAndUpdateScooters(this._lastExtendedVehicleBounds, this._mcg);
     this.setMapEventHandlers();
     this._map.addLayer(this._mcg);
+    if (!this._refreshControl) {
+      this._refreshControl = this.newRefreshControl().addTo(this._map);
+    }
   }
 
   getAndUpdateScooters(bounds, mcg) {
     api.getMobilityMap(boundsToParams(bounds)).then((r) => {
       this.updateScooters({ ...r, bounds, mcg });
-      this._refreshId = refreshTimer(
-        () => this.getAndUpdateScooters(bounds, mcg),
-        r.data.refresh
-      );
+      this._refreshId = refreshTimer(() => {
+        // The user can postpone the automatic updates (WCAG 2.2.2, 2.2.4).
+        // Moving the map still fetches vehicles, since that is user initiated.
+        if (this._refreshPaused) {
+          return;
+        }
+        this.getAndUpdateScooters(bounds, mcg);
+      }, r.data.refresh);
     });
+  }
+
+  /**
+   * Pause or resume the automatic vehicle updates.
+   * Resuming fetches the vehicles right away.
+   * @param paused {boolean}
+   */
+  setRefreshPaused(paused) {
+    this._refreshPaused = paused;
+    if (!paused) {
+      this.getAndUpdateScooters(this._lastExtendedVehicleBounds, this._mcg);
+    }
+    if (this._onRefreshPausedChange) {
+      this._onRefreshPausedChange(paused);
+    }
   }
 
   updateScooters({ data, bounds, mcg }) {
@@ -248,7 +319,8 @@ export default class MapBuilder {
     );
     mcg.removeLayers(removableLeftoverMarkers, { chunkedLoading: true });
 
-    // Fourth: Close the map reserve card if the marker for a scooter is now gone
+    // Fourth: Tell the reserve card the marker for the selected scooter is now gone,
+    // so it can show a message (it is not closed automatically).
     const removedMarkers = removableMarkers.concat(removableLeftoverMarkers);
     const isVehicleRemoved = removedMarkers.find(
       (marker) => this._clickedVehicle?.options.id === marker.options.id
@@ -271,23 +343,37 @@ export default class MapBuilder {
     lat = lat * precisionFactor;
     lng = lng * precisionFactor;
     const vehicleImg = vehicleIconForVendorService(vehicleType, vehicleProvider.slug);
+    const label = t("mobility.vehicle_marker", {
+      vendor: vehicleProvider.name,
+      vehicleType: t(`trips.${vehicleType}`),
+    });
     const vehicleIcon = this._l.divIcon({
       html: `
         <img src="${scooterContainer}" alt=""/>
         <img src="${vehicleImg}" class="mobility-map-icon-img" alt=""/>
       `,
       className: "mobility-map-icon",
-      iconSize: [43.4, 52.6],
-      iconAnchor: [21.7, 52.6],
+      // The focusable square is 44x44 (WCAG 2.5.5, see .mobility-map-icon).
+      // The container image is 100x121.21, so its pointer ends 53.3px down.
+      iconSize: [44, 53.3],
+      iconAnchor: [22, 53.3],
     });
     return this._l
       .marker([lat, lng], {
         id,
         icon: vehicleIcon,
+        title: label,
+        alt: label,
+        keyboard: true,
         riseOnHover: true,
       })
+      .on("add", (e) => {
+        // The divIcon has only decorative images, so name the focusable marker explicitly.
+        e.target.getElement()?.setAttribute("aria-label", label);
+      })
       .on("click", (e) => {
-        this.centerLocation(e.latlng);
+        // Leaflet does not set latlng when the click comes from the Enter key.
+        this.centerLocation(e.latlng || e.target.getLatLng());
         const mapVehicle = {
           loc: bike.c,
           type: vehicleType,
@@ -296,6 +382,7 @@ export default class MapBuilder {
         };
         this._onVehicleClick(mapVehicle);
         this._clickedVehicle = e.target;
+        this._focusReturnVehicle = e.target;
       });
   }
 
@@ -342,14 +429,20 @@ export default class MapBuilder {
       "mobility.do_not_ride_title"
     )}</h6><p class='m-0'>${t("mobility.do_not_ride_intro")}</p>`;
 
+    let label;
     if (restriction.startsWith("do-not-park-or-ride")) {
       popup.setContent(parkingRestrictionContent + "<hr />" + ridingRestrictionContent);
+      // Some translations end the title with a period already.
+      const parkTitle = t("mobility.do_not_park_title").replace(/\.$/, "");
+      label = `${parkTitle}. ${t("mobility.do_not_ride_title")}`;
     } else if (restriction.startsWith("do-not-park")) {
       popup.setContent(parkingRestrictionContent);
+      label = t("mobility.do_not_park_title");
     } else if (restriction.startsWith("do-not-ride")) {
       popup.setContent(ridingRestrictionContent);
+      label = t("mobility.do_not_ride_title");
     }
-    return this._l
+    const layer = this._l
       .polygon([latlngs], {
         id: id,
         fillOpacity: 0.25,
@@ -357,6 +450,40 @@ export default class MapBuilder {
         weight: 1,
       })
       .bindPopup(popup);
+    // Polygons are pointer-only by default. Make the SVG path focusable and
+    // let keyboard users open the restriction popup with Enter or Space.
+    layer.on("add", () => {
+      const el = layer.getElement();
+      if (!el) {
+        return;
+      }
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("role", "button");
+      if (label) {
+        el.setAttribute("aria-label", label);
+      }
+      this._l.DomEvent.on(el, "keydown", (ev) => {
+        if (ev.key !== "Enter" && ev.key !== " ") {
+          return;
+        }
+        this._l.DomEvent.preventDefault(ev);
+        layer.openPopup();
+      });
+    });
+    return layer;
+  }
+
+  /**
+   * Call when the drawer is closed from outside the map (ie with its close button
+   * or Escape). Deselects the vehicle and puts focus back on its marker,
+   * or on the map if the marker is gone (WCAG 2.4.3).
+   */
+  releaseSelectedVehicle() {
+    const el = this._focusReturnVehicle?.getElement();
+    this._clickedVehicle = null;
+    this._focusReturnVehicle = null;
+    const target = el?.isConnected ? el : this._map.getContainer();
+    target.focus({ preventScroll: true });
   }
 
   stopRefreshTimer() {
@@ -371,11 +498,113 @@ export default class MapBuilder {
     return Math.max(15, this._map.getZoom());
   }
 
+  newPanControl() {
+    // Four-way pan buttons, so the map can be moved without dragging (WCAG 2.5.7).
+    const map = this._map;
+    const directions = [
+      { key: "up", label: t("mobility.pan_up"), icon: "bi-arrow-up", offset: [0, -100] },
+      {
+        key: "left",
+        label: t("mobility.pan_left"),
+        icon: "bi-arrow-left",
+        offset: [-100, 0],
+      },
+      {
+        key: "right",
+        label: t("mobility.pan_right"),
+        icon: "bi-arrow-right",
+        offset: [100, 0],
+      },
+      {
+        key: "down",
+        label: t("mobility.pan_down"),
+        icon: "bi-arrow-down",
+        offset: [0, 100],
+      },
+    ];
+    const PanControl = this._l.Control.extend({
+      options: { position: "bottomright" },
+      onAdd() {
+        const container = leaflet.DomUtil.create(
+          "div",
+          "leaflet-control-pan leaflet-control"
+        );
+        // Keep clicks and scrolls on the buttons from reaching the map.
+        leaflet.DomEvent.disableClickPropagation(container);
+        leaflet.DomEvent.disableScrollPropagation(container);
+        directions.forEach(({ key, label, icon, offset }) => {
+          const button = leaflet.DomUtil.create(
+            "button",
+            `leaflet-control-pan-button leaflet-control-pan-${key}`,
+            container
+          );
+          button.type = "button";
+          button.title = label;
+          button.setAttribute("aria-label", label);
+          const glyph = leaflet.DomUtil.create("i", `bi ${icon}`, button);
+          glyph.setAttribute("aria-hidden", "true");
+          leaflet.DomEvent.on(button, "click", (e) => {
+            leaflet.DomEvent.preventDefault(e);
+            map.panBy(offset, { animate: !prefersReducedMotion() });
+          });
+        });
+        return container;
+      },
+      onRemove() {},
+    });
+    return new PanControl();
+  }
+
+  newRefreshControl() {
+    // Toggle button to pause and resume the automatic vehicle updates (WCAG 2.2.2, 2.2.4).
+    const isPaused = () => this._refreshPaused;
+    const setPaused = (paused) => this.setRefreshPaused(paused);
+    const RefreshControl = this._l.Control.extend({
+      options: { position: "bottomleft" },
+      onAdd() {
+        const container = leaflet.DomUtil.create(
+          "div",
+          "leaflet-control-refresh leaflet-control"
+        );
+        leaflet.DomEvent.disableClickPropagation(container);
+        leaflet.DomEvent.disableScrollPropagation(container);
+        const button = leaflet.DomUtil.create(
+          "button",
+          "leaflet-control-refresh-button",
+          container
+        );
+        button.type = "button";
+        const glyph = leaflet.DomUtil.create("i", "bi", button);
+        glyph.setAttribute("aria-hidden", "true");
+        const render = () => {
+          const paused = isPaused();
+          const label = paused
+            ? t("mobility.resume_updates")
+            : t("mobility.pause_updates");
+          button.title = label;
+          button.setAttribute("aria-label", label);
+          glyph.className = paused ? "bi bi-play-fill" : "bi bi-pause-fill";
+        };
+        render();
+        leaflet.DomEvent.on(button, "click", (e) => {
+          leaflet.DomEvent.preventDefault(e);
+          setPaused(!isPaused());
+          render();
+        });
+        return container;
+      },
+      onRemove() {},
+    });
+    return new RefreshControl();
+  }
+
   newLocateControl() {
     // Adds locate button to center map on location when clicked
     const LocateControl = this._l.Control.extend({
       options: {
-        position: "bottomright",
+        // Sits in the left corner with the pause button, so the right corner
+        // (pan and zoom) stays clear of the drawer on small screens.
+        position: "bottomleft",
         link: undefined,
         center: (e) => {
           e.preventDefault();
@@ -403,7 +632,8 @@ export default class MapBuilder {
         link.title = t("mobility.locate_me");
         link.setAttribute("role", "button");
         link.setAttribute("aria-label", t("mobility.locate_me"));
-        leaflet.DomUtil.create("div", "bi bi-geo-fill", link);
+        const glyph = leaflet.DomUtil.create("div", "bi bi-geo-fill", link);
+        glyph.setAttribute("aria-hidden", "true");
         leaflet.DomEvent.on(
           this.options.link,
           "click",
@@ -475,17 +705,22 @@ export default class MapBuilder {
           this.newLocateControl().addTo(this._map);
           lastLoc = location.latlng;
           movementLine = this._l.polyline([[lastLoc.lat, lastLoc.lng]]);
-          this._locationMarker = this._l.animatedMarker(movementLine.getLatLngs(), {
-            icon: this._l.divIcon({
-              className: "mobility-location-marker-icon",
-              iconSize: [16, 16],
-              iconAnchor: [8, 8],
-            }),
-            interactive: false,
-            autoStart: false,
-            duration: 250,
-            distance: 0,
+          const locationIcon = this._l.divIcon({
+            className: "mobility-location-marker-icon",
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
           });
+          // Use a static marker, which jumps between locations rather than gliding,
+          // for users who prefer reduced motion (WCAG 2.3.3).
+          this._locationMarker = prefersReducedMotion()
+            ? this._l.marker(lastLoc, { icon: locationIcon, interactive: false })
+            : this._l.animatedMarker(movementLine.getLatLngs(), {
+                icon: locationIcon,
+                interactive: false,
+                autoStart: false,
+                duration: 250,
+                distance: 0,
+              });
           this._locationAccuracyCircle = this._l.circle([lastLoc.lat, lastLoc.lng], {
             className: "mobility-location-accuracy-circle-transition",
             radius: location.accuracy,
@@ -511,18 +746,33 @@ export default class MapBuilder {
           movementLine &&
           (lastLoc.lat !== location.latitude || lastLoc.lng !== location.longitude)
         ) {
-          this._locationMarker.stop();
           const nextLocation = [location.latitude, location.longitude];
-          // Sets next location distance for animation purpose
-          const nextDistance = this._l
-            .latLng(lastLoc.lat, lastLoc.lng)
-            .distanceTo(nextLocation);
-          this._locationMarker.options.distance = nextDistance;
+          // The marker is only animated if it was created as an animated marker
+          // and the user has not asked for reduced motion since.
+          const animated = Boolean(this._locationMarker.start);
+          const animateMove = animated && !prefersReducedMotion();
+          if (animated) {
+            this._locationMarker.stop();
+            // Sets next location distance for animation purpose
+            const nextDistance = this._l
+              .latLng(lastLoc.lat, lastLoc.lng)
+              .distanceTo(nextLocation);
+            this._locationMarker.options.distance = nextDistance;
+          }
           movementLine.addLatLng(nextLocation);
           this._locationAccuracyCircle
             .setLatLng(nextLocation)
             .setRadius(location.accuracy);
-          this._locationMarker.start();
+          if (animateMove) {
+            this._locationMarker.start();
+          } else {
+            if (animated) {
+              // Skip the line vertices we are not going to animate through.
+              this._locationMarker._i = movementLine.getLatLngs().length;
+            }
+            this.setLocationMarkerTransition("none");
+            this._locationMarker.setLatLng(nextLocation);
+          }
           lastLoc = location.latlng;
           this._lastLocation = location.latlng;
 
@@ -536,8 +786,16 @@ export default class MapBuilder {
     // will be re-enabled when loading scooters again
     this._map.off("moveend", this.moveEnd, this);
     this._map.off("click", this.click, this);
+    this._map.off("keydown", this.keyDown, this);
     this._mcg.clearLayers();
+    this._clickedVehicle = null;
+    this._focusReturnVehicle = null;
     this.stopRefreshTimer();
+    // Vehicles are not shown or updated during a trip, so there is nothing to pause.
+    if (this._refreshControl) {
+      this._refreshControl.remove();
+      this._refreshControl = null;
+    }
     if (this._locationMarker) {
       this.centerLocation(this._locationMarker.getLatLng());
     }
@@ -553,6 +811,10 @@ export default class MapBuilder {
       mLat.toPrecision(7) !== loweredLat.toPrecision(7) ||
       mLng.toPrecision(7) !== lng.toPrecision(7)
     ) {
+      if (prefersReducedMotion()) {
+        this._map.setView([loweredLat, lng], targetZoom, { animate: false });
+        return;
+      }
       this._map.flyTo([loweredLat, lng], targetZoom, {
         animate: true,
         duration: 1.3,
@@ -585,6 +847,14 @@ export default class MapBuilder {
     b._southWest.lng -= staticDegreesPad;
     this._lastExtendedStaticBounds = b;
   }
+}
+
+/**
+ * True if the user has asked the system to minimise non-essential motion.
+ * Checked on each use so a change to the setting applies without a reload.
+ */
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 }
 
 function boundsToParams(bounds) {

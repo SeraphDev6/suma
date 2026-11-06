@@ -1,0 +1,424 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "suma-a11y-agent-report",
+  "title": "Accessibility agent report (a11y-report/report.json)",
+  "description": "Written by the a11y-tester agent. validate-report.mjs enforces the evidence rules that JSON Schema cannot express.",
+  "type": "object",
+  "required": [
+    "summary",
+    "routes",
+    "findings",
+    "passes",
+    "notApplicable",
+    "needsHuman",
+    "dismissedLeads"
+  ],
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "Two or three plain-English sentences: what was tested and the overall result."
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "app",
+          "path",
+          "status"
+        ],
+        "properties": {
+          "app": {
+            "enum": [
+              "webapp"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "Route pattern exactly as in impact.json, e.g. /food/:id"
+          },
+          "url": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "tested",
+              "unreachable",
+              "needs_human"
+            ]
+          },
+          "statesTested": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "e.g. default, menu open, form errors shown, 320px wide, Spanish"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "sc",
+          "title",
+          "why",
+          "severity",
+          "app",
+          "route",
+          "url",
+          "element",
+          "steps",
+          "expected",
+          "actual",
+          "screenshots"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^F-\\d{3}$"
+          },
+          "sc": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^\\d\\.\\d\\.\\d{1,2}$"
+            }
+          },
+          "level": {
+            "enum": [
+              "A",
+              "AA",
+              "AAA"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string",
+            "description": "Plain English: who is affected and what they cannot do."
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "app": {
+            "enum": [
+              "webapp"
+            ]
+          },
+          "route": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "element": {
+            "type": "object",
+            "required": [
+              "selector"
+            ],
+            "properties": {
+              "selector": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "html": {
+                "type": "string"
+              }
+            }
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "expected": {
+            "type": "string"
+          },
+          "actual": {
+            "type": "string"
+          },
+          "measurement": {
+            "type": "object",
+            "description": "Raw JSON returned by the window.__a11y probe used. Required for measurable criteria."
+          },
+          "screenshots": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "caption"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "caption": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "leadIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer"
+              }
+            }
+          },
+          "introducedByDiff": {
+            "enum": [
+              "yes",
+              "no",
+              "unknown"
+            ]
+          },
+          "suggestedFix": {
+            "type": "string"
+          },
+          "replay": {
+            "type": "array",
+            "description": "Steps that reach the finding's state from a fresh page load, so the workflow can re-measure it independently. Required when `state` is set and the finding cites a measured criterion.",
+            "items": {
+              "type": "object",
+              "required": [
+                "action"
+              ],
+              "properties": {
+                "action": {
+                  "enum": [
+                    "click",
+                    "hover",
+                    "press",
+                    "fill",
+                    "resize",
+                    "scroll",
+                    "reducedMotion"
+                  ]
+                },
+                "target": {
+                  "type": "string",
+                  "description": "CSS selector (click, hover, fill)"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "width": {
+                  "type": "number"
+                },
+                "height": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "passes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sc",
+          "app",
+          "route",
+          "method",
+          "evidence"
+        ],
+        "properties": {
+          "sc": {
+            "type": "string"
+          },
+          "app": {
+            "enum": [
+              "webapp"
+            ]
+          },
+          "route": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "One route, or several when the same method and evidence cover each of them"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Which elements the pass covers, when the same criterion also has a finding on this route"
+          },
+          "method": {
+            "type": "string",
+            "description": "What was done, e.g. 'Tabbed through all 14 controls; focusInfo on each'"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "What was observed or measured"
+          },
+          "screenshot": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notApplicable": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sc",
+          "app",
+          "route",
+          "reason"
+        ],
+        "properties": {
+          "sc": {
+            "type": "string"
+          },
+          "app": {
+            "type": "string"
+          },
+          "route": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "needsHuman": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sc",
+          "app",
+          "route",
+          "reason"
+        ],
+        "properties": {
+          "sc": {
+            "type": "string"
+          },
+          "app": {
+            "type": "string"
+          },
+          "route": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "screenshot": {
+            "type": "string"
+          },
+          "blocker": {
+            "enum": [
+              "unreachable",
+              "irreversible",
+              "ambiguous",
+              "tool-limit"
+            ],
+            "description": "Required for procedural criteria (keyboard, 1.4.4, 1.4.10, 1.4.12, 2.3.3, 4.1.2, 1.3.1): unreachable = the page or state cannot be reached; irreversible = testing needs an action you may not take; ambiguous = you measured it and the result needs judgement; tool-limit = the tools cannot measure it (say why)."
+          }
+        }
+      }
+    },
+    "dismissedLeads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "leadId",
+          "reason",
+          "evidence"
+        ],
+        "properties": {
+          "leadId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "screenshot": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

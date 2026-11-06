@@ -1,12 +1,13 @@
 import api from "../api";
 import FormButtons from "../components/FormButtons";
-import FormControlGroup from "../components/FormControlGroup";
+import FormControlGroup, { RequiredFieldsNote } from "../components/FormControlGroup";
 import FormError from "../components/FormError";
 import OrganizationInputDropdown from "../components/OrganizationInputDropdown";
 import PageHeading from "../components/PageHeading.jsx";
 import { t } from "../localization";
 import keepDigits from "../modules/keepDigits";
 import useAsyncFetch from "../shared/react/useAsyncFetch";
+import useFormDraft from "../shared/react/useFormDraft";
 import { extractErrorCode } from "../state/useError";
 import useUser from "../state/useUser";
 import React from "react";
@@ -24,6 +25,7 @@ export default function OnboardingSignup() {
     handleSubmit,
     clearErrors,
     setValue,
+    watch,
     formState: { errors },
   } = useForm({
     mode: "all",
@@ -39,6 +41,21 @@ export default function OnboardingSignup() {
   const [organizationName, setOrganizationName] = React.useState(
     registrationSession?.organizationName || ""
   );
+  // Keep what the member typed if they have to sign in again or reload (2.2.5).
+  const { clearDraft } = useFormDraft({
+    watch,
+    setValue,
+    fields: DRAFT_FIELDS,
+    onRestore: (draft) => {
+      draft.name && setName(draft.name);
+      draft.address && setAddress(draft.address);
+      draft.address2 && setAddress2(draft.address2);
+      draft.city && setCity(draft.city);
+      draft.state && setState(draft.state);
+      draft.zip && setZipCode(draft.zip);
+      draft.organizationName && setOrganizationName(draft.organizationName);
+    },
+  });
   const handleFormSubmit = () => {
     api
       .updateMe({
@@ -53,6 +70,7 @@ export default function OnboardingSignup() {
         organizationName,
       })
       .then((r) => {
+        clearDraft();
         setUser(r.data);
         navigate("/onboarding/finish");
       })
@@ -85,6 +103,7 @@ export default function OnboardingSignup() {
       <PageHeading>{t("onboarding.enroll_title")}</PageHeading>
       {t("onboarding.enroll_intro")}
       <Form noValidate onSubmit={handleSubmit(handleFormSubmit)}>
+        <RequiredFieldsNote />
         <FormControlGroup
           className="mb-3"
           name="name"
@@ -135,6 +154,7 @@ export default function OnboardingSignup() {
           <FormControlGroup
             as={Col}
             name="state"
+            autoComplete="address-level1"
             label={t("forms.state")}
             required
             Input={Form.Select}
@@ -159,11 +179,13 @@ export default function OnboardingSignup() {
             autoComplete="postal-code"
             inputMode="numeric"
             label={t("forms.zip")}
+            text={t("forms.zip_help")}
             type="text"
             pattern="^[0-9]{5}(?:-[0-9]{4})?$"
             minLength="5"
             maxLength="10"
             required
+            errorKeys={{ required: "forms.invalid_zip", pattern: "forms.invalid_zip" }}
             register={register}
             errors={errors}
             value={zipCode}
@@ -195,3 +217,13 @@ export default function OnboardingSignup() {
     </>
   );
 }
+
+const DRAFT_FIELDS = [
+  "name",
+  "address",
+  "address2",
+  "city",
+  "state",
+  "zip",
+  "organizationName",
+];

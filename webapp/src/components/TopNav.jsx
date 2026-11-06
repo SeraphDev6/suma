@@ -1,6 +1,7 @@
 import sumaLogo from "../assets/images/suma-logo-plain-128.png";
 import { imageAltT, t } from "../localization";
 import useI18n from "../localization/useI18n";
+import { getReadingComfort, setReadingComfort } from "../modules/readingComfort";
 import signOut from "../modules/signOut";
 import useBackendGlobals from "../state/useBackendGlobals";
 import useGlobalViewState from "../state/useGlobalViewState";
@@ -13,6 +14,7 @@ import React from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Container from "react-bootstrap/Container";
+import Form from "react-bootstrap/Form";
 import Navbar from "react-bootstrap/Navbar";
 import { Link, useLocation } from "react-router-dom";
 
@@ -24,10 +26,12 @@ export default function TopNav() {
   return (
     <Navbar
       ref={setTopNav}
+      aria-label={t("nav.main")}
       className="pt-1 pb-0"
       bg={user?.adminMember ? "danger" : "primary"}
       expand={false}
-      variant="dark"
+      // Dark text on the gold bar (9.29:1); keep light text on the red admin bar.
+      variant={user?.adminMember ? "dark" : "light"}
       sticky="top"
       expanded={expanded}
       onToggle={() => setExpanded(!expanded)}
@@ -37,6 +41,7 @@ export default function TopNav() {
           href="/dashboard"
           className="me-auto d-flex align-items-center"
           as={RLink}
+          aria-label={t("nav.brand_link", { appName: t("common.app_name") })}
         >
           <img
             alt={imageAltT("suma_logo")}
@@ -47,15 +52,21 @@ export default function TopNav() {
           <p className="brand-text">{t("common.app_name")}</p>
         </Navbar.Brand>
         <div
+          role="status"
+          aria-hidden={isOnline}
           className={clsx(
             "offline-status fs-4 ms-2 ms-auto",
             isOnline ? "opacity-0" : "offline-status-fadein"
           )}
         >
-          <i className="bi bi-wifi-off text-white"></i>
+          <i className="bi bi-wifi-off text-white" aria-hidden="true"></i>
+          <span className="visually-hidden">{t("common.offline")}</span>
         </div>
 
-        <Navbar.Toggle className={clsx(expanded && "expanded")}>
+        <Navbar.Toggle
+          className={clsx(expanded && "expanded")}
+          label={t("nav.toggle_navigation")}
+        >
           <div className="navbar-toggler-icon-bar" />
           <div className="navbar-toggler-icon-bar" />
           <div className="navbar-toggler-icon-bar" />
@@ -85,6 +96,7 @@ export default function TopNav() {
               ) : (
                 <LanguageButtons className="mt-3" />
               )}
+              <ReadingComfortSwitch className="mt-3" />
               <NavFooter className="mt-4" />
             </div>
           </div>
@@ -94,6 +106,8 @@ export default function TopNav() {
   );
 }
 
+const LANGUAGE_LABEL_KEYS = { en: "common.in_english", es: "common.in_spanish" };
+
 function LanguageButtons({ className }) {
   const { supportedLocales } = useBackendGlobals();
   const { currentLanguage, changeLanguage } = useI18n();
@@ -101,24 +115,65 @@ function LanguageButtons({ className }) {
     return null;
   }
   return (
-    <ButtonGroup vertical className={clsx("nav-lang-btn-group", className)}>
-      {supportedLocales.items.map(({ code, native }) => (
-        <Button
-          key={code}
-          variant="outline-primary"
-          className={clsx(currentLanguage === code && "active-outline-button")}
-          onClick={() => changeLanguage(code)}
-        >
-          {native}
-        </Button>
-      ))}
-    </ButtonGroup>
+    <>
+      <h2 id="nav-language-heading" className="visually-hidden">
+        {t("nav.language_heading")}
+      </h2>
+      <ButtonGroup
+        vertical
+        className={clsx("nav-lang-btn-group", className)}
+        aria-labelledby="nav-language-heading"
+      >
+        {supportedLocales.items.map(({ code, native }) => (
+          <Button
+            key={code}
+            variant="outline-primary"
+            className={clsx(currentLanguage === code && "active-outline-button")}
+            onClick={() => changeLanguage(code)}
+            lang={code}
+            // Same name as the language link on the public pages ("En Español"),
+            // so the control is identified consistently (WCAG 3.2.4).
+            aria-label={LANGUAGE_LABEL_KEYS[code] ? t(LANGUAGE_LABEL_KEYS[code]) : native}
+            aria-pressed={currentLanguage === code}
+          >
+            {native}
+          </Button>
+        ))}
+      </ButtonGroup>
+    </>
+  );
+}
+
+/**
+ * Let the member choose more spacing between lines and paragraphs
+ * (WCAG 1.4.8 Visual Presentation). See modules/readingComfort.
+ */
+function ReadingComfortSwitch({ className }) {
+  const [checked, setChecked] = React.useState(getReadingComfort);
+  function handleChange(e) {
+    setReadingComfort(e.target.checked);
+    setChecked(e.target.checked);
+  }
+  return (
+    // Limit the width so the long label wraps, rather than widening the menu.
+    <div className={className} style={{ maxWidth: 240 }}>
+      <h2 className="visually-hidden">{t("nav.display_heading")}</h2>
+      <Form.Check
+        type="switch"
+        id="nav-reading-comfort"
+        className="text-dark"
+        label={t("common.reading_comfort")}
+        checked={checked}
+        onChange={handleChange}
+      />
+    </div>
   );
 }
 
 function AuthedUserButtons({ className, user, onCollapse }) {
   return (
     <>
+      <h2 className="visually-hidden">{t("nav.menu_heading")}</h2>
       <NavLinkButton
         href="/dashboard"
         icon="house-door-fill"
@@ -169,7 +224,7 @@ function AuthedUserButtons({ className, user, onCollapse }) {
         variant="outline-danger"
         className="nav-menu-button text-start mt-2"
       >
-        <i className="bi bi-box-arrow-right me-2"></i>
+        <i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>
         {t("common.logout")}
       </Button>
       <LanguageButtons className="mt-3" />
@@ -187,9 +242,9 @@ function NavLinkButton({ href, className, icon, label, onNoChangeClick }) {
     }
   }
   const hereIcon = isAtHref ? (
-    <i className="bi bi-caret-right-fill me-2"></i>
+    <i className="bi bi-caret-right-fill me-2" aria-hidden="true"></i>
   ) : (
-    <i className="bi bi-caret-right me-2"></i>
+    <i className="bi bi-caret-right me-2" aria-hidden="true"></i>
   );
   return (
     <Button
@@ -198,9 +253,14 @@ function NavLinkButton({ href, className, icon, label, onNoChangeClick }) {
       className={clsx("nav-menu-button text-start d-flex align-items-center", className)}
       as={RLink}
       onClick={handleClick}
+      aria-current={isAtHref ? "page" : undefined}
     >
       {hereIcon}
-      <i className={`me-2 bi bi-${icon}`} style={{ fontSize: "120%" }}></i>
+      <i
+        className={`me-2 bi bi-${icon}`}
+        style={{ fontSize: "120%" }}
+        aria-hidden="true"
+      ></i>
       {label}
     </Button>
   );
@@ -212,31 +272,51 @@ function NavFooter({ className }) {
   const iconStyle = { fontSize: "140%" };
   return (
     <>
+      <h2 className="visually-hidden">{t("nav.footer_heading")}</h2>
       <div className={clsx("d-flex flex-column", className)}>
-        <div className={clsx("text-primary", rowCls)}>
+        <div className={clsx("text-dark", rowCls)}>
           &copy; {new Date().getFullYear()} mysuma.org
         </div>
         <div className="d-flex flex-row justify-content-center">
-          <ExternalLink href="https://www.instagram.com/mysuma/" aria-label="Instagram">
-            <i className="bi bi-instagram me-3" style={iconStyle}></i>
+          <ExternalLink
+            href="https://www.instagram.com/mysuma/"
+            aria-label="Instagram"
+            noIcon
+            // The gap is a margin on the link, not the icon, so each 44px hit area
+            // is centred on its icon and the two do not overlap (2.5.5).
+            className="a11y-target me-4"
+          >
+            <i className="bi bi-instagram" style={iconStyle} aria-hidden="true"></i>
           </ExternalLink>
           <ExternalLink
             href="https://www.linkedin.com/company/mysuma/"
             aria-label="LinkedIn"
+            noIcon
+            className="a11y-target"
           >
-            <i className="bi bi-linkedin" style={iconStyle}></i>
+            <i className="bi bi-linkedin" style={iconStyle} aria-hidden="true"></i>
           </ExternalLink>
         </div>
       </div>
       <div className={rowCls}>
-        <Link to="/terms-of-use" className={linkCls}>
+        <FooterLink to="/terms-of-use" className={linkCls}>
           {t("common.terms_of_use")}
-        </Link>
+        </FooterLink>
       </div>
       <div className={rowCls}>
-        <Link to="/privacy-policy" className={linkCls}>
+        <FooterLink to="/privacy-policy" className={linkCls}>
           {t("common.privacy_policy")}
-        </Link>
+        </FooterLink>
+      </div>
+      <div className={rowCls}>
+        <FooterLink to="/glossary" className={linkCls}>
+          {t("glossary.title")}
+        </FooterLink>
+      </div>
+      <div className={rowCls}>
+        <FooterLink to="/sitemap" className={linkCls}>
+          {t("sitemap.title")}
+        </FooterLink>
       </div>
       <div className={rowCls}>
         <a href="mailto:info@mysuma.org" className={linkCls}>
@@ -244,5 +324,16 @@ function NavFooter({ className }) {
         </a>
       </div>
     </>
+  );
+}
+
+function FooterLink({ to, ...rest }) {
+  const location = useLocation();
+  return (
+    <Link
+      to={to}
+      aria-current={location.pathname === to ? "page" : undefined}
+      {...rest}
+    />
   );
 }

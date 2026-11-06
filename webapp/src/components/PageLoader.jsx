@@ -1,4 +1,5 @@
-import loaderRing from "../assets/images/loader-ring.svg";
+import { t } from "../localization";
+import LoaderRing from "./LoaderRing";
 import clsx from "clsx";
 import React from "react";
 
@@ -39,15 +40,14 @@ export default function PageLoader({
     className
   );
   return (
-    <div className={clsx("text-center", containerClass)}>
-      <img
-        src={loaderRing}
+    <div className={clsx("text-center", containerClass)} role="status">
+      <LoaderRing
         width={width}
         height={height}
-        alt=""
         className={cls}
         style={{ maxWidth: 150 }}
       />
+      <span className="visually-hidden">{t("common.loading")}</span>
     </div>
   );
 }

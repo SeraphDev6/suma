@@ -26,6 +26,7 @@ import Funding from "./pages/Funding";
 import FundingAddCard from "./pages/FundingAddCard";
 import FundingAddFunds from "./pages/FundingAddFunds";
 import FundingLinkBankAccount from "./pages/FundingLinkBankAccount";
+import Glossary from "./pages/Glossary";
 import Home from "./pages/Home";
 import LedgersOverview from "./pages/LedgersOverview";
 import MarkdownContent from "./pages/MarkdownContent";
@@ -43,6 +44,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import PrivateAccountDetail from "./pages/PrivateAccountDetail.jsx";
 import PrivateAccountsList from "./pages/PrivateAccountsList";
 import RegainAccountAccess from "./pages/RegainAccountAccess.jsx";
+import Sitemap from "./pages/Sitemap";
 import Start from "./pages/Start";
 import Styleguide from "./pages/Styleguide";
 import TripDetail from "./pages/TripDetail.jsx";
@@ -138,6 +140,24 @@ function AppRoutes() {
           path="/privacy-policy-content"
           exact
           element={renderWithHocs(PrivacyPolicyContent)}
+        />
+        <Route
+          path="/sitemap"
+          exact
+          element={renderWithHocs(
+            withMetatags({ title: t("titles.sitemap") }),
+            withPageLayout({ gutters: true, top: true }),
+            Sitemap
+          )}
+        />
+        <Route
+          path="/glossary"
+          exact
+          element={renderWithHocs(
+            withMetatags({ title: t("titles.glossary") }),
+            withPageLayout({ gutters: true, top: true }),
+            Glossary
+          )}
         />
         <Route
           path="/terms-of-use"
@@ -327,7 +347,7 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("food.cart_title") }),
+            withMetatags({ title: t("food.cart_title"), section: t("food.title") }),
             withPageLayout({ gutters: false, top: true }),
             FoodCart
           )}
@@ -339,7 +359,7 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("food.checkout") }),
+            withMetatags({ title: t("food.checkout"), section: t("food.title") }),
             withPageLayout({ gutters: false, top: true }),
             FoodCheckout
           )}
@@ -351,7 +371,7 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("food.checkout") }),
+            withMetatags({ title: t("food.checkout"), section: t("food.title") }),
             withPageLayout({ appNav: true, gutters: false }),
             FoodCheckoutConfirmation
           )}
@@ -388,7 +408,10 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("payments.link_bank_account") }),
+            withMetatags({
+              title: t("payments.link_bank_account"),
+              section: t("payments.payment_methods"),
+            }),
             withPageLayout({ top: true, gutters: true }),
             FundingLinkBankAccount
           )}
@@ -400,7 +423,10 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("payments.add_card") }),
+            withMetatags({
+              title: t("payments.add_card"),
+              section: t("payments.payment_methods"),
+            }),
             withPageLayout({ top: true, gutters: true }),
             FundingAddCard
           )}
@@ -436,7 +462,7 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("titles.order_history") }),
+            withMetatags({ title: t("titles.order_history"), section: t("food.title") }),
             withPageLayout(),
             OrderHistoryList
           )}
@@ -448,7 +474,10 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("food.unclaimed_order_history_title") }),
+            withMetatags({
+              title: t("food.unclaimed_order_history_title"),
+              section: t("food.title"),
+            }),
             withPageLayout(),
             UnclaimedOrderList
           )}
@@ -460,7 +489,7 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("titles.order") }),
+            withMetatags({ title: t("titles.order"), section: t("food.title") }),
             withPageLayout(),
             OrderHistoryDetail
           )}
@@ -496,7 +525,7 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("titles.trips") }),
+            withMetatags({ title: t("titles.trips"), section: t("titles.mobility") }),
             withPageLayout({ top: true, gutters: false }),
             Trips
           )}
@@ -508,7 +537,10 @@ function AppRoutes() {
             redirectIfUnauthed,
             redirectIfUnboarded,
             withScreenLoaderMount(),
-            withMetatags({ title: t("titles.trip_detail") }),
+            withMetatags({
+              title: t("titles.trip_detail"),
+              section: [t("titles.trips"), t("titles.mobility")],
+            }),
             withPageLayout({ top: true, gutters: false }),
             TripDetail
           )}
