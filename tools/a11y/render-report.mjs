@@ -11,7 +11,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { findingsMarker, HEADING, MARKER, short, statusBlock, TEST_LABEL, testedShaMarker } from "./lib/comment.mjs";
+import { findingsMarker, HEADING, MARKER, SCAN_LABEL, short, statusBlock, TEST_LABEL, testedShaMarker } from "./lib/comment.mjs";
 import { criterion, loadConfig, mdEscape, parseArgs, readJson, reportDir } from "./lib/common.mjs";
 
 const args = parseArgs();
@@ -28,6 +28,18 @@ const scLink = (s) => {
   return c ? `[${s} ${c.title}](${c.url}) (${c.level})` : s;
 };
 const routesOf = (x) => (Array.isArray(x.route) ? x.route : [x.route]);
+const agentless = v.mode === "agentless";
+
+/**
+ * Findings the next run carries forward. A live test carries all its findings. An agentless scan
+ * carries only findings an agent confirmed at some point (re-confirmed by measurement, or not
+ * re-measurable and so still open); its automated findings come back from axe on every run.
+ */
+function carriedForward() {
+  if (!agentless) return findings;
+  const open = (v.carriedOpen || []).map(({ lead }) => ({ ...lead, id: lead.previousId || lead.id, element: { selector: lead.target?.[0], name: lead.elementName } }));
+  return [...findings.filter((f) => f.carriedFrom), ...open];
+}
 
 function measurementLine(f) {
   const m = f.measurement;
@@ -46,15 +58,17 @@ function image(p, caption) {
 }
 
 function markdown() {
-  const lines = [MARKER, HEADING, findingsMarker(findings, args.sha || null), ""];
+  const lines = [MARKER, HEADING, findingsMarker(carriedForward(), args.sha || null), ""];
   if (args.sha) {
     const stale = args["current-sha"] && args["current-sha"] !== args.sha;
     lines.push(
       testedShaMarker(args.sha),
       statusBlock(
-        stale
-          ? [`> [!WARNING]`, `> Tested commit \`${short(args.sha)}\`; newer commits were pushed during the test (latest \`${short(args["current-sha"])}\`). Add the \`${TEST_LABEL}\` label to test again.`]
-          : [`> [!NOTE]`, `> Tested commit \`${short(args.sha)}\`. After pushing more commits, add the \`${TEST_LABEL}\` label to test again.`],
+        agentless
+          ? [stale ? `> [!WARNING]` : `> [!NOTE]`, `> Automated scan of commit \`${short(args.sha)}\`${stale ? `; newer commits were pushed since (latest \`${short(args["current-sha"])}\`)` : ""}. No agent ran. Add \`${SCAN_LABEL}\` to scan again (free), or \`${TEST_LABEL}\` for the live agent test (uses Copilot requests).`]
+          : stale
+            ? [`> [!WARNING]`, `> Tested commit \`${short(args.sha)}\`; newer commits were pushed during the test (latest \`${short(args["current-sha"])}\`). Add the \`${TEST_LABEL}\` label to test again.`]
+            : [`> [!NOTE]`, `> Tested commit \`${short(args.sha)}\`. After pushing more commits, add the \`${TEST_LABEL}\` label to test again.`],
       ),
       "",
     );
@@ -64,8 +78,15 @@ function markdown() {
   for (const f of findings) byLevel[f.level]++;
   const passCount = (v.passes || []).length;
   const tested = (v.routes || []).filter((r) => r.status === "tested").length;
-  lines.push("| Confirmed failures | Level A | Level AA | Level AAA | Passed checks | Routes tested | Needs a human |", "|---|---|---|---|---|---|---|");
-  lines.push(`| **${findings.length}** | ${byLevel.A} | ${byLevel.AA} | ${byLevel.AAA} | ${passCount} | ${tested} of ${(v.routes || []).length} | ${(v.needsHuman || []).length} |`, "");
+  if (agentless) {
+    const scanned = (v.routes || []).filter((r) => r.status === "scanned").length;
+    const carried = findings.filter((f) => f.carriedFrom).length + (v.carriedFixed || []).length + (v.carriedOpen || []).length;
+    lines.push("| Automated failures | Level A | Level AA | Level AAA | Pages scanned | Leads to review | Carried findings: still fail / now pass / not re-checked |", "|---|---|---|---|---|---|---|");
+    lines.push(`| **${findings.length}** | ${byLevel.A} | ${byLevel.AA} | ${byLevel.AAA} | ${scanned} of ${(v.routes || []).length} | ${(v.leadsToReview || []).length} | ${carried ? `${findings.filter((f) => f.carriedFrom).length} / ${(v.carriedFixed || []).length} / ${(v.carriedOpen || []).length}` : "none"} |`, "");
+  } else {
+    lines.push("| Confirmed failures | Level A | Level AA | Level AAA | Passed checks | Routes tested | Needs a human |", "|---|---|---|---|---|---|---|");
+    lines.push(`| **${findings.length}** | ${byLevel.A} | ${byLevel.AA} | ${byLevel.AAA} | ${passCount} | ${tested} of ${(v.routes || []).length} | ${(v.needsHuman || []).length} |`, "");
+  }
   const calls = v.validation?.browserCalls;
   if (calls) {
     const c = (t) => calls[t] || 0;
@@ -75,7 +96,7 @@ function markdown() {
     lines.push(`> [!WARNING]`, `> The agent's report did not pass validation (${v.validation.errors.length} problems). Results below are incomplete; see the artifact.`, "");
   }
 
-  if (findings.length) lines.push("### Confirmed failures", "");
+  if (findings.length) lines.push(agentless ? "### Automated failures" : "### Confirmed failures", "");
   for (const f of findings) {
     lines.push(`#### ${f.id} · ${f.title}`, "");
     lines.push(`**WCAG:** ${f.sc.map(scLink).join(", ")} · **Severity:** ${f.severity}${f.introducedByDiff ? ` · **Introduced by this PR:** ${f.introducedByDiff}` : ""}`, "");
@@ -85,6 +106,9 @@ function markdown() {
     lines.push(`**Where:** \`${f.route}\`${f.state ? ` (${f.state})` : ""}${f.locale && f.locale !== "en" ? `, locale ${f.locale}` : ""}, element \`${mdEscape(f.element.selector)}\`${f.element.name ? ` "${mdEscape(f.element.name)}"` : ""}${f.source?.file ? `, source \`${f.source.file}${f.source.line ? ":" + f.source.line : ""}\`` : ""}`, "");
     lines.push("**Steps to reproduce:**", ...f.steps.map((s, i) => `${i + 1}. ${s}`), "");
     lines.push(`**Expected:** ${f.expected}`, "", `**Actual:** ${f.actual}`, "");
+    if (f.automated) lines.push(`**Found by:** ${f.automated.source}${f.automated.rule ? ` rule \`${f.automated.rule}\`` : ""}, automatically; not confirmed in a live test.`, "");
+    if (f.carriedFrom) lines.push(`**Carried from** the live test on \`${short(f.carriedFrom.fromSha)}\` (${f.carriedFrom.previousId}); the independent re-measurement on this commit still shows the failure.`, "");
+    if (f.alsoOn?.length) lines.push(`**Also on:** ${f.alsoOn.map((r) => `\`${r}\``).join(" ")}`, "");
     if (f.reinstated) lines.push(`**Reinstated:** the agent dismissed ${f.reinstated.leadId} as fixed ("${mdEscape(f.reinstated.agentReason || "")}"), but the independent re-measurement still shows the failure.`, "");
     const m = measurementLine(f);
     if (m) lines.push(`**Measurement:** ${m}`, "");
@@ -95,7 +119,7 @@ function markdown() {
     for (const s of f.screenshots) lines.push(image(s.path, s.caption), `<sub>${s.caption}</sub>`, "");
     if (f.suggestedFix) lines.push(`<details><summary>Suggested fix</summary>\n\n${f.suggestedFix}\n\n</details>`, "");
   }
-  if (!findings.length) lines.push("No confirmed failures on the tested pages.", "");
+  if (!findings.length) lines.push(agentless ? "No automated failures on the scanned pages." : "No confirmed failures on the tested pages.", "");
 
   // Passes grouped by criterion.
   const passBy = new Map();
@@ -132,17 +156,21 @@ function markdown() {
     }
     lines.push("", "</details>", "");
   }
+  section("Carried findings that now pass when re-measured", v.carriedFixed, (c) => `- ${c.previousId} ${mdEscape(c.title)} on \`${c.route}\`: ${mdEscape(c.detail)}`);
+  section("Carried findings not re-checked (still open until a live test resolves them)", v.carriedOpen, ({ lead, reason }) => `- ${lead.previousId} ${mdEscape(lead.title)} (${(lead.sc || []).join(", ")}) on \`${lead.route}\`: ${mdEscape(reason)}`);
+  section("Automated leads to review (axe could not decide these)", v.leadsToReview, (l) => `- ${l.leadId} \`${l.rule}\` (${(l.sc || []).join(", ") || "best practice"}) on \`${l.route}\`, \`${mdEscape(l.target)}\`: ${mdEscape(String(l.summary || l.help || "").replace(/\s+/g, " ").trim())}`);
   section("Not applicable", v.notApplicable, (n) => `- ${scLink(n.sc)} on ${routesOf(n).map((r) => `\`${r}\``).join(" ")}: ${mdEscape(n.reason)}`);
   section("Automated leads dismissed after live testing", v.dismissedLeads, (d) => `- ${d.leadId}: ${mdEscape(d.reason)} Evidence: ${mdEscape(d.evidence)}`);
   section("Claims rejected by the validator (not reported as failures)", v.rejected, (r) => `- ${r.id} ${mdEscape(r.title)} (${(r.sc || []).join(", ")}): ${mdEscape(r.rejectedBecause.join("; "))}`);
-  const untested = (v.routes || []).filter((r) => r.status !== "tested");
+  const untested = (v.routes || []).filter((r) => r.status !== (agentless ? "scanned" : "tested"));
   section("Routes not tested", untested, (r) => `- \`${r.path}\` ${r.status}: ${mdEscape(r.notes)}`);
   if (impact) {
     const skipped = Object.values(impact.apps).flatMap((a) => a.notTested);
     if (skipped.length) lines.push(`<sub>Out of scope for this run (wide change, capped at ${config.impact.maxRoutesPerApp} routes per app): ${skipped.map((p) => `\`${p}\``).join(", ")}</sub>`, "");
   }
   const links = [args["run-url"] && `[workflow run](${args["run-url"]})`, args["artifact-url"] && `[full report and screenshots](${args["artifact-url"]})`].filter(Boolean);
-  lines.push(`<sub>Static analysis and axe-core produced leads; a Copilot agent confirmed each in a real browser with Playwright. Failures are listed only with a screenshot, reproduction steps and, for measurable criteria, a measurement that shows the failure. ${links.join(" · ")}</sub>`);
+  if (agentless) lines.push(`<sub>Automated only: axe-core violations, the show/hide state check, and an independent re-measurement of findings from the last live test. Keyboard use, flows and anything needing judgement were not tested, and no criterion is reported as passing. ${links.join(" · ")}</sub>`);
+  else lines.push(`<sub>Static analysis and axe-core produced leads; a Copilot agent confirmed each in a real browser with Playwright. Failures are listed only with a screenshot, reproduction steps and, for measurable criteria, a measurement that shows the failure. ${links.join(" · ")}</sub>`);
   let md = lines.join("\n") + "\n";
   if (md.length > 64000) md = md.slice(0, 63000) + "\n\n_Truncated; see the full report artifact._\n";
   return md;
@@ -183,7 +211,7 @@ figure{margin:12px 0}img{max-width:100%;border:1px solid var(--line)}figcaption{
 table{border-collapse:collapse;width:100%;font-size:.9em}td,th{border:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top}
 </style></head><body>
 <h1>Accessibility impact report</h1><p>${esc(v.summary)}</p>
-<h2>Confirmed failures (${findings.length})</h2>${cards || "<p>None on the tested pages.</p>"}
+<h2>${agentless ? "Automated failures" : "Confirmed failures"} (${findings.length})</h2>${cards || "<p>None on the tested pages.</p>"}
 <h2>Passed checks (${(v.passes || []).length})</h2><table><thead><tr><th>Criterion</th><th>Routes</th><th>Method</th><th>Evidence</th></tr></thead><tbody>${passRows}</tbody></table>
 <h2>Needs a human (${(v.needsHuman || []).length})</h2><ul>${(v.needsHuman || []).map((n) => `<li>${n.sc} ${esc(criterion(n.sc)?.title)} on ${routesOf(n).map(esc).join(", ")}: ${esc(n.reason)}</li>`).join("")}</ul>
 <h2>Dismissed leads (${(v.dismissedLeads || []).length})</h2><ul>${(v.dismissedLeads || []).map((d) => `<li>${esc(d.leadId)}: ${esc(d.reason)} ${esc(d.evidence)}</li>`).join("")}</ul>

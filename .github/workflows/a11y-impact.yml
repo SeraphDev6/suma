@@ -3,9 +3,15 @@ name: Accessibility phase 2 (traced impact)
 # Every push to a PR runs only the preview: trace the diff to the member pages it affects
 # (tools/a11y/impact.mjs, seconds, no app) and update the sticky comment.
 #
-# The live test is manual, because it builds and starts Suma and spends Copilot requests. Start it by
-# adding the `a11y-test` label to the PR (the workflow removes the label when done, so add it again
-# to re-test), or from the Actions tab with "Run workflow" once this file is on the default branch.
+# Testing is manual, because it builds and starts Suma. There are three modes:
+#   agentless  label `a11y-scan`, free: axe-core, the show/hide check and an independent
+#              re-measurement of findings carried from the last live test (tools/a11y/agentless.mjs).
+#   agent      label `a11y-test`, spends Copilot requests: the full live test described below.
+#   replay     "Run workflow" only, free: take report.json and the inputs from an earlier run's
+#              artifact, re-measure, validate and render with the current code. For working on the
+#              scanner itself without paying for an agent run.
+# The workflow removes the label when done, so add it again to re-run. "Run workflow" from the
+# Actions tab works once this file is on the default branch; it defaults to agentless.
 #   1. Trace the diff to the affected pages.
 #   2. Start Suma with a bootstrapped database and run axe-core on those pages (leads + screenshots).
 #   3. A Copilot CLI agent (.github/agents/a11y-tester.agent.md) drives Playwright MCP to confirm or
@@ -42,6 +48,14 @@ on:
         default: origin/main
       pr:
         description: Pull request number to comment on (optional)
+        required: false
+      mode:
+        description: "agentless (free), agent (spends Copilot requests), or replay (free; needs replay_run)"
+        type: choice
+        options: [agentless, agent, replay]
+        default: agentless
+      replay_run:
+        description: For replay, the ID of the earlier run whose artifact to reuse
         required: false
 
 # Pushes cancel an older preview, and re-adding the label cancels an older test, but a push never
@@ -92,7 +106,8 @@ jobs:
   test:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.action == 'labeled' && github.event.label.name == 'a11y-test' &&
+      (github.event.action == 'labeled' &&
+       (github.event.label.name == 'a11y-test' || github.event.label.name == 'a11y-scan') &&
        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -100,11 +115,13 @@ jobs:
       contents: read
       pull-requests: read
       copilot-requests: write
+      actions: read
     env:
       A11Y_REPORT_DIR: a11y-report
     outputs:
-      routes: ${{ steps.impact.outputs.routes }}
-      sha: ${{ steps.impact.outputs.sha }}
+      routes: ${{ steps.scope.outputs.routes }}
+      sha: ${{ steps.scope.outputs.sha }}
+      mode: ${{ steps.mode.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,25 +135,59 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Choose the mode
+        id: mode
+        env:
+          INPUT_MODE: ${{ inputs.mode }}
+          LABEL: ${{ github.event.label.name }}
+          REPLAY_RUN: ${{ inputs.replay_run }}
+        run: |
+          case "${INPUT_MODE:-$LABEL}" in
+            agent|a11y-test) mode=agent ;;
+            replay) mode=replay ;;
+            *) mode=agentless ;;
+          esac
+          if [ "$mode" = replay ] && [ -z "$REPLAY_RUN" ]; then echo "::error::replay needs replay_run"; exit 1; fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Mode: $mode" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Install the scanner
         working-directory: tools/a11y
         run: npm ci --no-audit --no-fund
 
+      - name: Load the earlier run to replay
+        if: steps.mode.outputs.mode == 'replay'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPLAY_RUN: ${{ inputs.replay_run }}
+        run: |
+          gh run download "$REPLAY_RUN" -R "$GITHUB_REPOSITORY" -n a11y-impact -D a11y-report
+          test -f a11y-report/report.json || { echo "::error::run $REPLAY_RUN has no report.json to replay"; exit 1; }
+          # Everything after the agent is redone with the current code.
+          rm -f a11y-report/recheck.json a11y-report/validated.json a11y-report/comment.md a11y-report/report.html
+          rm -f a11y-report/screenshots/recheck-*.png
+
       - name: Phase 1 static scan (input for lead tracing)
+        if: steps.mode.outputs.mode != 'replay'
         run: node tools/a11y/static-scan.mjs --fail-on none
 
       - name: Trace the diff to affected pages
-        id: impact
+        if: steps.mode.outputs.mode != 'replay'
         env:
           BASE: ${{ inputs.base || format('origin/{0}', github.base_ref) }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           node tools/a11y/impact.mjs --base "$BASE" --head "$HEAD_SHA"
+
+      - name: Pages in scope
+        id: scope
+        run: |
           echo "routes=$(node -e 'const i=require("./a11y-report/impact.json");console.log(Object.values(i.apps).reduce((n,a)=>n+a.routes.length,0))')" >> "$GITHUB_OUTPUT"
-          echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          # A replay reports on the commit the replayed run tested.
+          echo "sha=$(node -e 'console.log(require("./a11y-report/impact.json").head || "")')" >> "$GITHUB_OUTPUT"
 
       - name: Carry forward earlier findings
-        if: steps.impact.outputs.routes != '0'
+        if: steps.scope.outputs.routes != '0' && steps.mode.outputs.mode != 'replay'
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number || inputs.pr }}
@@ -146,19 +197,19 @@ jobs:
           node tools/a11y/carry.mjs --existing a11y-report/existing.md
 
       - name: Start Suma
-        if: steps.impact.outputs.routes != '0'
+        if: steps.scope.outputs.routes != '0'
         uses: ./.github/actions/suma-a11y-env
 
       - name: axe-core sweep of the affected pages
-        if: steps.impact.outputs.routes != '0'
+        if: steps.scope.outputs.routes != '0' && steps.mode.outputs.mode != 'replay'
         run: node tools/a11y/axe-sweep.mjs
 
       - name: Install Copilot CLI
-        if: steps.impact.outputs.routes != '0'
+        if: steps.scope.outputs.routes != '0' && steps.mode.outputs.mode == 'agent'
         run: npm install -g @github/copilot@1.0.98
 
       - name: Copilot agent tests the pages
-        if: steps.impact.outputs.routes != '0'
+        if: steps.scope.outputs.routes != '0' && steps.mode.outputs.mode == 'agent'
         id: agent
         continue-on-error: true
         timeout-minutes: 45
@@ -184,15 +235,23 @@ jobs:
             --share a11y-report/agent-session.md
 
       - name: Re-measure the findings independently
-        if: steps.impact.outputs.routes != '0'
+        if: steps.scope.outputs.routes != '0'
         continue-on-error: true
         run: |
           # Written only here, after the agent has finished; never trust a copy the agent left behind.
           rm -f a11y-report/recheck.json
-          node tools/a11y/recheck.mjs
+          if [ "${{ steps.mode.outputs.mode }}" = agentless ]; then
+            node tools/a11y/recheck.mjs --carried
+          else
+            node tools/a11y/recheck.mjs
+          fi
+
+      - name: Build the automated report
+        if: steps.scope.outputs.routes != '0' && steps.mode.outputs.mode == 'agentless'
+        run: node tools/a11y/agentless.mjs
 
       - name: Validate the agent's report
-        if: steps.impact.outputs.routes != '0'
+        if: steps.scope.outputs.routes != '0' && steps.mode.outputs.mode != 'agentless'
         run: |
           if [ ! -f a11y-report/report.json ]; then
             echo '{"summary":"The agent did not produce a report.","routes":[],"findings":[],"passes":[],"notApplicable":[],"needsHuman":[],"dismissedLeads":[]}' > a11y-report/report.json
@@ -245,7 +304,7 @@ jobs:
         run: |
           {
             echo "<!-- suma-a11y-impact-report -->"
-            echo "## Accessibility phase 2: live test of the changed pages"
+            echo "## Accessibility phase 2: the changed pages"
             echo ""
             echo "<!-- a11y-tested-sha: ${TESTED_SHA} -->"
             echo "<!-- a11y-status:start -->"
@@ -297,7 +356,7 @@ jobs:
 
       - name: Remove the label so adding it again re-tests
         if: always() && github.event.action == 'labeled'
-        run: gh api -X DELETE "repos/${GITHUB_REPOSITORY}/issues/${PR}/labels/a11y-test" > /dev/null || true
+        run: gh api -X DELETE "repos/${GITHUB_REPOSITORY}/issues/${PR}/labels/${{ github.event.label.name }}" > /dev/null || true
 
       - name: Fail on failures this PR introduces
         if: needs.test.outputs.routes != '0'

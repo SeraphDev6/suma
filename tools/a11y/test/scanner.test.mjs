@@ -320,3 +320,43 @@ test("target size is measured at rest, not while focus raises the button over it
     await browser.close();
   }
 });
+
+test("agentless report: axe violations and show/hide leads are failures, carried findings go by the re-check", async () => {
+  const { agentlessReport } = await import("../agentless.mjs");
+  const lead = (id, extra) => ({ id, app: "webapp", url: `http://x/app/${id}`, locale: "en", ...extra });
+  const axe = {
+    pages: [{ app: "webapp", path: "/a" }, { app: "webapp", path: "/b" }],
+    leads: [
+      lead("AXE-001", { source: "axe", kind: "violation", rule: "button-name", impact: "critical", sc: ["4.1.2"], route: "/a", target: ["#x"], help: "Buttons must have discernible text" }),
+      lead("AXE-002", { source: "axe", kind: "violation", rule: "button-name", impact: "critical", sc: ["4.1.2"], route: "/b", target: ["#x"], help: "Buttons must have discernible text" }),
+      lead("AXE-003", { source: "axe", kind: "needs-review", rule: "color-contrast", sc: ["1.4.3"], route: "/a", target: "#y" }),
+      lead("AXE-004", { source: "axe", kind: "violation", rule: "region", sc: [], route: "/a", target: "#z" }),
+      lead("DISC-001", { source: "disclosure-check", kind: "needs-review", rule: "disclosure-state", sc: ["4.1.2"], route: "/a", target: ["button.t"], help: "no aria-expanded", alsoOn: ["/b"] }),
+    ],
+  };
+  const previous = { fromSha: "abc12345", leads: [
+    { id: "PREV-001", previousId: "F-001", sc: ["2.5.5"], app: "webapp", route: "/a", url: "http://x/app/a", title: "Small", target: ["button.s"] },
+    { id: "PREV-002", previousId: "F-002", sc: ["1.4.10"], app: "webapp", route: "/a", url: "http://x/app/a", title: "Scrolls", target: ["main"] },
+    { id: "PREV-003", previousId: "F-003", sc: ["1.3.1"], app: "webapp", route: "/a", url: "http://x/app/a", title: "Error not tied", target: ["#r"] },
+  ] };
+  const recheck = [
+    { id: "PREV-001", sc: "2.5.5", status: "confirmed", carried: true, measurement: { width: 38, height: 44 } },
+    { id: "PREV-002", sc: "1.4.10", status: "refuted", carried: true, detail: "fits" },
+  ];
+  const impact = { apps: { webapp: { routes: [{ path: "/a" }, { path: "/b" }, { path: "/c" }] } } };
+  const r = agentlessReport({ impact, axe, previous, recheck, catalog: loadCatalog() });
+  assert.equal(r.mode, "agentless");
+  assert.deepEqual(r.findings.map((f) => [f.title.slice(0, 12), f.leadIds.join("+"), f.alsoOn?.join() || ""]), [
+    ["Buttons must", "AXE-001+AXE-002", "/b"],
+    ["A show/hide ", "DISC-001", "/b"],
+    ["Small", "PREV-001", ""],
+  ]);
+  assert.equal(r.findings[0].severity, "critical");
+  assert.ok(r.findings[0].automated && !r.findings[2].automated && r.findings[2].carriedFrom);
+  assert.deepEqual(r.leadsToReview.map((l) => l.leadId), ["AXE-003", "AXE-004"]);
+  assert.deepEqual(r.carriedFixed.map((c) => c.leadId), ["PREV-002"]);
+  assert.deepEqual(r.carriedOpen.map((c) => c.lead.id), ["PREV-003"]);
+  assert.match(r.carriedOpen[0].reason, /cannot be re-measured without the agent/);
+  assert.equal(r.passes.length, 0);
+  assert.deepEqual(r.routes.map((x) => x.status), ["scanned", "scanned", "not-scanned"]);
+});

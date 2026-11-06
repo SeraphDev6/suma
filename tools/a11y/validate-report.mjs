@@ -52,6 +52,40 @@ function imageOk(p) {
   return null;
 }
 
+/**
+ * A finding rebuilt from a carried PREV- lead and the re-check results that show it still fails.
+ * Used when the validator overrules a dismissal, and by the agentless report.
+ */
+export function findingFromLead(lead, { id, results, catalog, previous }) {
+  const scs = [...new Set(results.map((r) => r.sc))].filter((s) => catalog.criteria[s] && !catalog.obsolete?.[s]);
+  const levels = scs.map((s) => catalog.criteria[s].level);
+  const shots = results.filter((r) => r.screenshot && !imageOk(r.screenshot)).map((r) => ({ path: r.screenshot, caption: `Independent re-measurement of ${r.sc}: the element (outlined) still fails.` }));
+  return {
+    id,
+    sc: scs,
+    level: ["A", "AA", "AAA"].find((l) => levels.includes(l)),
+    criteria: scs.map((s) => criterion(s)),
+    app: lead.app,
+    route: lead.route,
+    url: lead.url,
+    locale: lead.locale,
+    state: lead.state,
+    replay: lead.replay,
+    title: lead.title,
+    why: lead.why || `This was confirmed as a failure in the run on ${previous?.fromSha ? previous.fromSha.slice(0, 8) : "an earlier commit"} and still fails.`,
+    expected: lead.expected || `Meets ${scs.map((s) => `${s} ${criterion(s).title}`).join(", ")}.`,
+    actual: lead.actual || "",
+    severity: lead.severity || "medium",
+    steps: lead.steps?.length ? lead.steps : [`Open ${lead.url}`, `Measure ${lead.target?.[0] || "the element"}`],
+    suggestedFix: lead.suggestedFix,
+    element: { selector: lead.target?.[0], name: lead.elementName },
+    measurement: results[0]?.measurement,
+    screenshots: shots,
+    leadIds: [lead.id],
+    recheck: results.map(({ sc: s, status, detail }) => ({ sc: s, status, detail })),
+  };
+}
+
 export function validate(report, { impact, axe, catalog, checklist, recheck = null, previous = null }) {
   const errors = [];
   const warnings = [];
@@ -141,34 +175,8 @@ export function validate(report, { impact, axe, catalog, checklist, recheck = nu
     if (!lead || !still.length) continue;
     const scs = [...new Set(still.map((r) => r.sc))].filter((s) => isSc(s) && !obsolete[s]);
     if (!scs.length) continue;
-    const levels = scs.map((s) => catalog.criteria[s].level);
     const id = `F-${String(nextNum++).padStart(3, "0")}`;
-    const shots = still.filter((r) => r.screenshot && !imageOk(r.screenshot)).map((r) => ({ path: r.screenshot, caption: `Independent re-measurement of ${r.sc}: the element (outlined) still fails.` }));
-    findings.push({
-      id,
-      sc: scs,
-      level: ["A", "AA", "AAA"].find((l) => levels.includes(l)),
-      criteria: scs.map((s) => criterion(s)),
-      app: lead.app,
-      route: lead.route,
-      url: lead.url,
-      locale: lead.locale,
-      state: lead.state,
-      replay: lead.replay,
-      title: lead.title,
-      why: lead.why || `This was confirmed as a failure in the run on ${previous?.fromSha ? previous.fromSha.slice(0, 8) : "an earlier commit"} and still fails.`,
-      expected: lead.expected || "",
-      actual: lead.actual || "",
-      severity: lead.severity,
-      steps: lead.steps?.length ? lead.steps : [`Open ${lead.url}`, `Measure ${lead.target?.[0] || "the element"}`],
-      suggestedFix: lead.suggestedFix,
-      element: { selector: lead.target?.[0], name: lead.elementName },
-      measurement: still[0].measurement,
-      screenshots: shots,
-      leadIds: [d.leadId],
-      recheck: still.map(({ sc: s, status, detail }) => ({ sc: s, status, detail })),
-      reinstated: { leadId: d.leadId, agentReason: d.reason },
-    });
+    findings.push({ ...findingFromLead(lead, { id, results: still, catalog, previous }), reinstated: { leadId: d.leadId, agentReason: d.reason } });
     overruled.add(d.leadId);
     warnings.push(`${d.leadId} was dismissed by the agent ("${d.reason}"), but the independent re-measurement still shows ${scs.join(", ")} failing; reinstated as ${id}`);
   }

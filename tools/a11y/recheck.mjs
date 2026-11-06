@@ -5,6 +5,8 @@
  * the validator drops it.
  *
  *   node recheck.mjs [--report a11y-report/report.json]   writes <reportDir>/recheck.json
+ *   node recheck.mjs --carried                             agentless: re-measure every carried
+ *                                                          finding in previous.json, no report needed
  *
  * For each finding and each measurable criterion it cites (contrast, non-text contrast, target size,
  * focus obscured, reflow, text spacing): open the finding's URL with the right session and locale,
@@ -98,23 +100,29 @@ async function measure(page, sc, f) {
   return { skipped: "not re-measurable" };
 }
 
-/** Carried findings the agent dismissed, in the shape of a finding, so they can be re-measured. */
+/** A carried PREV- lead in the shape of a finding, so it can be re-measured. */
+const leadAsFinding = (l) => ({ id: l.id, sc: l.sc, app: l.app, route: l.route, url: l.url, locale: l.locale, state: l.state, replay: l.replay, measurement: l.measurement, element: { selector: l.target?.[0] } });
+
+/** Carried findings the agent dismissed, so a wrong "fixed" can be caught. */
 export function dismissedCarried(report, previous) {
   const leads = new Map((previous?.leads || []).map((l) => [l.id, l]));
   return (report.dismissedLeads || [])
     .filter((d) => /^PREV-/.test(d.leadId || "") && leads.has(d.leadId))
-    .map((d) => {
-      const l = leads.get(d.leadId);
-      return { id: d.leadId, dismissedLead: true, sc: l.sc, app: l.app, route: l.route, url: l.url, locale: l.locale, state: l.state, replay: l.replay, measurement: l.measurement, element: { selector: l.target?.[0] } };
-    });
+    .map((d) => ({ ...leadAsFinding(leads.get(d.leadId)), dismissedLead: true }));
 }
 
-export async function recheck(report, { config, impact, out, browser, previous = null }) {
+/** Every carried finding, for the agentless scan (no agent report to take findings from). */
+export function allCarried(previous) {
+  return (previous?.leads || []).map((l) => ({ ...leadAsFinding(l), carried: true }));
+}
+
+export async function recheck(report, { config, impact, out, browser, previous = null, carried = false }) {
   const results = [];
   const initScript = path.join(out, ".mcp/init.js");
-  for (const f of [...(report.findings || []), ...dismissedCarried(report, previous)]) {
+  const targets = carried ? allCarried(previous) : [...(report.findings || []), ...dismissedCarried(report, previous)];
+  for (const f of targets) {
     for (const sc of (f.sc || []).filter((s) => RECHECKABLE.includes(s))) {
-      const res = { id: f.id, sc, ...(f.dismissedLead ? { dismissedLead: true } : {}) };
+      const res = { id: f.id, sc, ...(f.dismissedLead ? { dismissedLead: true } : {}), ...(f.carried ? { carried: true } : {}) };
       try {
         const info = routeInfo(impact, f.app, f.route);
         const app = config.apps[f.app];
@@ -140,7 +148,7 @@ export async function recheck(report, { config, impact, out, browser, previous =
             // MEASURED explains why a measurement does NOT show a failure; null means it does.
             if (why === null) {
               Object.assign(res, { status: "confirmed", measurement: m });
-              if (f.dismissedLead) res.screenshot = await evidenceShot(page, f.element?.selector, `${f.id}-${sc}`, out);
+              if (f.dismissedLead || f.carried) res.screenshot = await evidenceShot(page, f.element?.selector, `${f.id}-${sc}`, out);
             }
             else if (/^needs /.test(why) || /indeterminate|ambiguous/.test(why)) Object.assign(res, { status: "skipped", detail: why, measurement: m });
             else Object.assign(res, { status: "refuted", detail: why, measurement: m });
@@ -162,18 +170,18 @@ if (isMain(import.meta.url)) {
   const config = loadConfig();
   const out = reportDir(config);
   const reportPath = path.resolve(REPO_ROOT, args.report || path.join(out, "report.json"));
-  if (!fs.existsSync(reportPath)) {
+  if (!args.carried && !fs.existsSync(reportPath)) {
     console.log("No report to re-check.");
     process.exit(0);
   }
-  const report = readJson(reportPath);
+  const report = args.carried ? {} : readJson(reportPath);
   const impactPath = path.join(out, "impact.json");
   const impact = fs.existsSync(impactPath) ? readJson(impactPath) : null;
   const previousPath = path.join(out, "previous.json");
   const previous = fs.existsSync(previousPath) ? readJson(previousPath) : null;
   const browser = await chromium.launch();
   try {
-    const results = await recheck(report, { config, impact, out, browser, previous });
+    const results = await recheck(report, { config, impact, out, browser, previous, carried: !!args.carried });
     writeJson(path.join(out, "recheck.json"), { checkedAt: new Date().toISOString(), results });
     for (const r of results) console.log(`${r.id}${r.dismissedLead ? " (dismissed by the agent)" : ""} ${r.sc}: ${r.status}${r.detail ? ` (${r.detail})` : ""}`);
   } finally {

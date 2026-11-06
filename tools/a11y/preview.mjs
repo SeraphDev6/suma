@@ -11,7 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { isMain, loadConfig, mdEscape, parseArgs, readJson, reportDir } from "./lib/common.mjs";
-import { HEADING, MARKER, replaceStatus, short, statusBlock, TEST_LABEL, testedSha } from "./lib/comment.mjs";
+import { HEADING, MARKER, replaceStatus, SCAN_LABEL, short, statusBlock, TEST_LABEL, testedSha } from "./lib/comment.mjs";
 
 export function scopeLines(impact, max = 15) {
   const routes = Object.values(impact.apps).flatMap((a) => a.routes);
@@ -33,7 +33,7 @@ export function previewBody({ impact, sha, existing }) {
   const scope = count
     ? `This PR currently affects **${count} member app page${count === 1 ? "" : "s"}**.`
     : "This PR currently affects **no member app pages**.";
-  const start = count ? `Add the \`${TEST_LABEL}\` label to run the live test on commit \`${short(sha)}\`.` : "There is nothing to test in the browser.";
+  const start = count ? `Add the \`${SCAN_LABEL}\` label for a free automated scan of commit \`${short(sha)}\`, or \`${TEST_LABEL}\` for the live agent test (uses Copilot requests).` : "There is nothing to test in the browser.";
 
   if (tested) {
     const current = sha.startsWith(tested) || tested.startsWith(sha);

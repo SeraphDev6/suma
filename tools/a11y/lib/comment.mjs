@@ -6,10 +6,11 @@ import { execFileSync } from "node:child_process";
  * exist; the push-time preview rewrites only that block, so test results stay in place.
  */
 export const MARKER = "<!-- suma-a11y-impact-report -->";
-export const HEADING = "## Accessibility phase 2: live test of the changed pages";
+export const HEADING = "## Accessibility phase 2: the changed pages";
 export const STATUS_START = "<!-- a11y-status:start -->";
 export const STATUS_END = "<!-- a11y-status:end -->";
 export const TEST_LABEL = "a11y-test";
+export const SCAN_LABEL = "a11y-scan";
 
 export const short = (sha) => String(sha || "").slice(0, 8);
 export const testedShaMarker = (sha) => `<!-- a11y-tested-sha: ${sha} -->`;

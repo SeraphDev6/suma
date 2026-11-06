@@ -5,16 +5,23 @@ Two phases, both measured against WCAG 2.2 Levels A, AA and AAA.
 | Phase | When | What it does | Output |
 |---|---|---|---|
 | 1. Static | Every PR and push to main (`a11y-static.yml`) | Lints the member app with every `eslint-plugin-jsx-a11y` rule that maps to a WCAG criterion, plus Suma checks (stylesheets, HTML shell, manifest, untranslated strings) | Code scanning annotations, job summary, `static.json` |
-| 2. Traced impact | Preview on every push to a PR that touches `webapp/` or `data/i18n/`; the live test only when you add the `a11y-test` label (`a11y-impact.yml`) | Preview: traces the diff to the pages it can affect. Live test: runs axe-core on them, then a Copilot agent tests those pages in a real browser through Playwright MCP | One sticky PR comment: the pages in scope, then failures, screenshots, passes and open questions |
+| 2. Traced impact | Preview on every push to a PR that touches `webapp/` or `data/i18n/`; a free automated scan with the `a11y-scan` label, the live agent test with the `a11y-test` label (`a11y-impact.yml`) | Preview: traces the diff to the pages it can affect. Live test: runs axe-core on them, then a Copilot agent tests those pages in a real browser through Playwright MCP | One sticky PR comment: the pages in scope, then failures, screenshots, passes and open questions |
 
 Phase 1 finds code patterns everywhere. Phase 2 tells you what a person using this PR's pages would hit.
 
 ## How phase 2 works
 
-**Starting it.** The live test builds and starts Suma and spends Copilot requests, so it runs only on request:
+**Starting it.** Testing builds and starts Suma, so it runs only on request, in one of three modes:
 
-- **Label:** add `a11y-test` to the pull request. The run tests the PR's head commit, then removes the label, so add it again to re-test.
-- **Run workflow:** from the Actions tab, with an optional base ref and PR number. This button appears only once the workflow is on the default branch.
+| Mode | Start it with | Cost | What it does |
+|---|---|---|---|
+| Agentless | the `a11y-scan` label, or "Run workflow" (the default mode) | Actions minutes only | axe-core and the show/hide check on the pages in scope, plus an independent re-measurement of the findings carried from the last live test (`agentless.mjs`, `recheck.mjs --carried`) |
+| Agent | the `a11y-test` label, or "Run workflow" with mode `agent` | Copilot requests (six runs used up a $10 Copilot plan) | The full live test below |
+| Replay | "Run workflow" with mode `replay` and `replay_run` set to an earlier run's ID | Actions minutes only | Takes `report.json` and the inputs from that run's artifact, then re-measures, validates and renders with the current code. Use it to work on the scanner without paying for an agent run. |
+
+Each run tests the PR's head commit (a replay reports on the commit the replayed run tested), then removes its label, so add it again to re-run. "Run workflow" appears in the Actions tab only once the workflow is on the default branch. Create the labels once: `gh label create a11y-scan` and `gh label create a11y-test`.
+
+**What agentless mode reports.** Failures, each marked as automated and not confirmed in a live test: axe-core violations on WCAG criteria (merged across pages when the same rule fails on the same element), show/hide buttons that change the page without exposing their state, and carried findings that the re-check still measures as failing. It lists, without reporting as failures, the axe results it could not decide, carried findings that now pass, and carried findings it cannot re-measure (those stay open and carry to the next run). It records no passes: keyboard use, flows and anything needing judgement need the agent.
 
 Every push runs only the preview. It traces the diff in seconds, without starting the app, and updates the comment with the pages in scope. When there are earlier results, it keeps them and marks them as being for an older commit. A push never cancels a test that is running. Fork PRs get the preview in the job summary and cannot run the test.
 
