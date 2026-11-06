@@ -14,6 +14,10 @@
  *   confirmed  the fresh measurement also shows the failure
  *   refuted    the fresh measurement shows a pass
  *   skipped    it could not be re-measured (element not found, needs a visual judgement, ...)
+ *
+ * It also re-measures carried findings (PREV- leads in previous.json) that the agent dismissed as
+ * fixed. If the failure still reproduces, the result is "confirmed" with dismissedLead set, a
+ * screenshot is saved, and the validator puts the finding back.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -50,13 +54,31 @@ async function tabTo(page, selector, max = 80) {
   return false;
 }
 
+/** Screenshot of the element still failing, outlined, saved under the report's screenshots/. */
+async function evidenceShot(page, selector, name, out) {
+  try {
+    await page.evaluate((s) => window.__a11y.highlight?.(s, "still fails"), selector);
+    await page.waitForTimeout(200);
+    const rel = `screenshots/recheck-${name.replace(/[^A-Za-z0-9.-]+/g, "_")}.png`;
+    fs.mkdirSync(path.join(out, "screenshots"), { recursive: true });
+    await page.screenshot({ path: path.join(out, rel) });
+    return rel;
+  } catch {
+    return undefined;
+  }
+}
+
 async function measure(page, sc, f) {
   const sel = f.element?.selector;
   const exists = sel ? await page.evaluate((s) => { const el = document.querySelector(s); return !!el && !!el.getClientRects().length; }, sel).catch(() => false) : false;
   if (["1.4.3", "1.4.6", "1.4.11", "2.5.8", "2.5.5", "2.4.11", "2.4.12"].includes(sc) && !exists) return { skipped: `element ${sel || "(no selector)"} is not on the page after loading and replaying` };
   if (sc === "1.4.3" || sc === "1.4.6") return { m: await page.evaluate((s) => window.__a11y.contrast(s), sel) };
   if (sc === "1.4.11") return { m: await page.evaluate(([s, prop]) => window.__a11y.nonTextContrast(s, prop), [sel, f.measurement?.property || "borderTopColor"]) };
-  if (sc === "2.5.8" || sc === "2.5.5") return { m: await page.evaluate((s) => window.__a11y.targetSize(s), sel) };
+  if (sc === "2.5.8" || sc === "2.5.5") {
+    // Measure the target at rest: no hover from an earlier replay step, no focus (the probe blurs).
+    await page.mouse.move(0, 0);
+    return { m: await page.evaluate((s) => window.__a11y.targetSize(s), sel) };
+  }
   if (sc === "2.4.11" || sc === "2.4.12") {
     if (!(await tabTo(page, sel))) return { skipped: `Tab never reached ${sel}` };
     return { m: await page.evaluate(() => window.__a11y.focusInfo()) };
@@ -76,12 +98,23 @@ async function measure(page, sc, f) {
   return { skipped: "not re-measurable" };
 }
 
-export async function recheck(report, { config, impact, out, browser }) {
+/** Carried findings the agent dismissed, in the shape of a finding, so they can be re-measured. */
+export function dismissedCarried(report, previous) {
+  const leads = new Map((previous?.leads || []).map((l) => [l.id, l]));
+  return (report.dismissedLeads || [])
+    .filter((d) => /^PREV-/.test(d.leadId || "") && leads.has(d.leadId))
+    .map((d) => {
+      const l = leads.get(d.leadId);
+      return { id: d.leadId, dismissedLead: true, sc: l.sc, app: l.app, route: l.route, url: l.url, locale: l.locale, state: l.state, replay: l.replay, measurement: l.measurement, element: { selector: l.target?.[0] } };
+    });
+}
+
+export async function recheck(report, { config, impact, out, browser, previous = null }) {
   const results = [];
   const initScript = path.join(out, ".mcp/init.js");
-  for (const f of report.findings || []) {
+  for (const f of [...(report.findings || []), ...dismissedCarried(report, previous)]) {
     for (const sc of (f.sc || []).filter((s) => RECHECKABLE.includes(s))) {
-      const res = { id: f.id, sc };
+      const res = { id: f.id, sc, ...(f.dismissedLead ? { dismissedLead: true } : {}) };
       try {
         const info = routeInfo(impact, f.app, f.route);
         const app = config.apps[f.app];
@@ -105,7 +138,10 @@ export async function recheck(report, { config, impact, out, browser }) {
           else {
             const why = MEASURED[sc](m);
             // MEASURED explains why a measurement does NOT show a failure; null means it does.
-            if (why === null) Object.assign(res, { status: "confirmed", measurement: m });
+            if (why === null) {
+              Object.assign(res, { status: "confirmed", measurement: m });
+              if (f.dismissedLead) res.screenshot = await evidenceShot(page, f.element?.selector, `${f.id}-${sc}`, out);
+            }
             else if (/^needs /.test(why) || /indeterminate|ambiguous/.test(why)) Object.assign(res, { status: "skipped", detail: why, measurement: m });
             else Object.assign(res, { status: "refuted", detail: why, measurement: m });
           }
@@ -133,11 +169,13 @@ if (isMain(import.meta.url)) {
   const report = readJson(reportPath);
   const impactPath = path.join(out, "impact.json");
   const impact = fs.existsSync(impactPath) ? readJson(impactPath) : null;
+  const previousPath = path.join(out, "previous.json");
+  const previous = fs.existsSync(previousPath) ? readJson(previousPath) : null;
   const browser = await chromium.launch();
   try {
-    const results = await recheck(report, { config, impact, out, browser });
+    const results = await recheck(report, { config, impact, out, browser, previous });
     writeJson(path.join(out, "recheck.json"), { checkedAt: new Date().toISOString(), results });
-    for (const r of results) console.log(`${r.id} ${r.sc}: ${r.status}${r.detail ? ` (${r.detail})` : ""}`);
+    for (const r of results) console.log(`${r.id}${r.dismissedLead ? " (dismissed by the agent)" : ""} ${r.sc}: ${r.status}${r.detail ? ` (${r.detail})` : ""}`);
   } finally {
     await browser.close();
   }

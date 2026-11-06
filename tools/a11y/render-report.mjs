@@ -85,6 +85,7 @@ function markdown() {
     lines.push(`**Where:** \`${f.route}\`${f.state ? ` (${f.state})` : ""}${f.locale && f.locale !== "en" ? `, locale ${f.locale}` : ""}, element \`${mdEscape(f.element.selector)}\`${f.element.name ? ` "${mdEscape(f.element.name)}"` : ""}${f.source?.file ? `, source \`${f.source.file}${f.source.line ? ":" + f.source.line : ""}\`` : ""}`, "");
     lines.push("**Steps to reproduce:**", ...f.steps.map((s, i) => `${i + 1}. ${s}`), "");
     lines.push(`**Expected:** ${f.expected}`, "", `**Actual:** ${f.actual}`, "");
+    if (f.reinstated) lines.push(`**Reinstated:** the agent dismissed ${f.reinstated.leadId} as fixed ("${mdEscape(f.reinstated.agentReason || "")}"), but the independent re-measurement still shows the failure.`, "");
     const m = measurementLine(f);
     if (m) lines.push(`**Measurement:** ${m}`, "");
     if (f.recheck?.length) {

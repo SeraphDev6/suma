@@ -130,6 +130,50 @@ export function validate(report, { impact, axe, catalog, checklist, recheck = nu
       if (e) errors.push(`dismissed lead ${d.leadId}: ${e}`);
     }
   }
+  // A carried failure the agent dismissed as fixed, but which the independent re-measurement
+  // still reproduces, goes back in as a finding.
+  const prevLeads = new Map((previous?.leads || []).map((l) => [l.id, l]));
+  const overruled = new Set();
+  let nextNum = Math.max(0, ...findings.map((f) => Number(/(\d+)$/.exec(f.id || "")?.[1]) || 0)) + 1;
+  for (const d of report.dismissedLeads || []) {
+    const lead = prevLeads.get(d.leadId);
+    const still = (recheck || []).filter((r) => r.id === d.leadId && r.dismissedLead && r.status === "confirmed");
+    if (!lead || !still.length) continue;
+    const scs = [...new Set(still.map((r) => r.sc))].filter((s) => isSc(s) && !obsolete[s]);
+    if (!scs.length) continue;
+    const levels = scs.map((s) => catalog.criteria[s].level);
+    const id = `F-${String(nextNum++).padStart(3, "0")}`;
+    const shots = still.filter((r) => r.screenshot && !imageOk(r.screenshot)).map((r) => ({ path: r.screenshot, caption: `Independent re-measurement of ${r.sc}: the element (outlined) still fails.` }));
+    findings.push({
+      id,
+      sc: scs,
+      level: ["A", "AA", "AAA"].find((l) => levels.includes(l)),
+      criteria: scs.map((s) => criterion(s)),
+      app: lead.app,
+      route: lead.route,
+      url: lead.url,
+      locale: lead.locale,
+      state: lead.state,
+      replay: lead.replay,
+      title: lead.title,
+      why: lead.why || `This was confirmed as a failure in the run on ${previous?.fromSha ? previous.fromSha.slice(0, 8) : "an earlier commit"} and still fails.`,
+      expected: lead.expected || "",
+      actual: lead.actual || "",
+      severity: lead.severity,
+      steps: lead.steps?.length ? lead.steps : [`Open ${lead.url}`, `Measure ${lead.target?.[0] || "the element"}`],
+      suggestedFix: lead.suggestedFix,
+      element: { selector: lead.target?.[0], name: lead.elementName },
+      measurement: still[0].measurement,
+      screenshots: shots,
+      leadIds: [d.leadId],
+      recheck: still.map(({ sc: s, status, detail }) => ({ sc: s, status, detail })),
+      reinstated: { leadId: d.leadId, agentReason: d.reason },
+    });
+    overruled.add(d.leadId);
+    warnings.push(`${d.leadId} was dismissed by the agent ("${d.reason}"), but the independent re-measurement still shows ${scs.join(", ")} failing; reinstated as ${id}`);
+  }
+  const dismissedLeads = (report.dismissedLeads || []).filter((d) => !overruled.has(d.leadId));
+
   const requiredLeads = [...(axe?.leads || []).map((l) => l.id), ...(impact?.leads || []).filter((l) => l.onChangedLine).map((l) => l.id), ...(previous?.leads || []).map((l) => l.id)];
   for (const id of requiredLeads) if (!resolved.has(id)) errors.push(`lead ${id} is neither confirmed (leadIds on a finding) nor dismissed`);
 
@@ -183,7 +227,7 @@ export function validate(report, { impact, axe, catalog, checklist, recheck = nu
   }
   for (const f of rejected) errors.push(`finding ${f.id} rejected: ${f.rejectedBecause.join("; ")}`);
 
-  return { findings, rejected, errors, warnings };
+  return { findings, rejected, errors, warnings, dismissedLeads };
 }
 
 function main() {
@@ -223,7 +267,7 @@ function main() {
       res.errors.push(`browser use: no session transcript at ${args.session}, so live testing cannot be confirmed`);
     }
   }
-  const result = { ...report, findings: res.findings, rejected: res.rejected, validation: { errors: res.errors, warnings: res.warnings, browserCalls: session?.counts, evidence: session?.evidence, validatedAt: new Date().toISOString() } };
+  const result = { ...report, dismissedLeads: res.dismissedLeads, findings: res.findings, rejected: res.rejected, validation: { errors: res.errors, warnings: res.warnings, browserCalls: session?.counts, evidence: session?.evidence, validatedAt: new Date().toISOString() } };
   writeJson(path.join(out, "validated.json"), result);
   for (const w of res.warnings) console.log(`warning: ${w}`);
   for (const e of res.errors) console.log(`error: ${e}`);

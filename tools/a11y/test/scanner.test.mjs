@@ -13,6 +13,8 @@ import { previousLeads } from "../carry.mjs";
 import { findingsMarker } from "../lib/comment.mjs";
 import { spreadsChildren } from "../static-scan.mjs";
 import { MEASURED, validate } from "../validate-report.mjs";
+import { dismissedCarried } from "../recheck.mjs";
+import { chromium } from "playwright";
 
 test("catalog has all 86 active WCAG 2.2 criteria and marks 4.1.1 obsolete", () => {
   const c = loadCatalog();
@@ -270,4 +272,51 @@ test("Tab stops come from the agent's own probe calls when the sweep has none", 
   assert.equal(moved.length, 0);
   const short = pageEvidence(log.replace("\"count\": 12", "\"count\": 20"));
   assert.match(enforceCoverage({ passes: [{ sc: "2.1.1", app: "webapp", route: "/cart/:id" }] }, { evidence: short }).moved[0].reason, /12 Tab presses on a page with 20 Tab stops/);
+});
+
+test("a carried failure the agent dismissed is reinstated when the re-measurement still fails", () => {
+  const body = findingsMarker([{ id: "F-003", sc: ["2.5.5"], level: "AAA", app: "webapp", route: "/cart/:id", url: "http://x/app/cart/1", title: "Remove is 38px wide", why: "People with tremors miss small buttons and remove the wrong item.", expected: "44 by 44", actual: "38 by 44", steps: ["Open the cart"], element: { selector: "button.rm" }, measurement: { property: "x", big: [1, 2] } }], "abc123456789");
+  const prev = previousLeads(body);
+  assert.equal(prev.leads[0].measurement.property, "x");
+  assert.equal(prev.leads[0].measurement.big, undefined);
+  const dismissed = [{ leadId: "PREV-001", reason: "Fixed: hit area now 44x44", evidence: "targetSize 44x44", screenshot: "screenshots/none.png" }];
+  const report = { routes: [], findings: [], passes: [], notApplicable: [], needsHuman: [], dismissedLeads: dismissed };
+  const carried = dismissedCarried(report, prev);
+  assert.deepEqual(carried.map((f) => [f.id, f.element.selector, f.dismissedLead]), [["PREV-001", "button.rm", true]]);
+
+  const opts = { impact: null, axe: null, catalog: loadCatalog(), checklist: [], previous: prev };
+  const still = validate(report, { ...opts, recheck: [{ id: "PREV-001", sc: "2.5.5", status: "confirmed", dismissedLead: true, measurement: { width: 38, height: 44 } }] });
+  assert.equal(still.findings.length, 1);
+  assert.equal(still.findings[0].id, "F-001");
+  assert.equal(still.findings[0].level, "AAA");
+  assert.deepEqual(still.findings[0].leadIds, ["PREV-001"]);
+  assert.match(still.findings[0].reinstated.agentReason, /Fixed/);
+  assert.equal(still.dismissedLeads.length, 0);
+  assert.match(still.warnings.join(), /reinstated as F-001/);
+
+  const fixed = validate(report, { ...opts, recheck: [{ id: "PREV-001", sc: "2.5.5", status: "refuted", dismissedLead: true }] });
+  assert.equal(fixed.findings.length, 0);
+  assert.equal(fixed.dismissedLeads.length, 1);
+});
+
+test("target size is measured at rest, not while focus raises the button over its neighbours", async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<style>
+      .g { display: inline-flex; margin: 100px }
+      .b { position: relative; width: 38px; height: 38px; padding: 0; border: 0; margin: 0 }
+      .b::before { content: ""; position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; min-width: 44px; min-height: 44px; transform: translate(-50%, -50%) }
+      .b:focus { z-index: 1 }
+    </style><div class="g"><button class="b" id="a">-</button><button class="b" id="m">1</button><button class="b" id="c">+</button></div>`);
+    await page.addScriptTag({ path: new URL("../agent/probes.js", import.meta.url).pathname });
+    await page.focus("#m");
+    const m = await page.evaluate(() => window.__a11y.targetSize("#m"));
+    assert.equal(m.measuredAtRest, true);
+    assert.ok(m.hitAreaPx.width < 44, `width at rest ${m.hitAreaPx.width}`);
+    assert.equal(m.passes["2.5.5"], false);
+    assert.equal(await page.evaluate(() => document.activeElement.id), "m", "focus is restored");
+  } finally {
+    await browser.close();
+  }
 });

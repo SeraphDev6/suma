@@ -51,9 +51,16 @@ export function upsertComment(repo, pr, body) {
   else gh(["api", "-X", "POST", `repos/${repo}/issues/${pr}/comments`, "--input", "-"], payload);
 }
 
+/** The parts of a measurement the re-check needs to re-measure a carried finding the same way. */
+function carriedMeasurement(m) {
+  if (!m) return undefined;
+  const keep = { property: m.property, contentLost: m.contentLost, pageScrollsHorizontally: m.pageScrollsHorizontally, clipped: Array.isArray(m.clipped) ? m.clipped.slice(0, 3) : undefined };
+  return Object.values(keep).some((v) => v !== undefined) ? keep : undefined;
+}
+
 /** Confirmed findings, embedded invisibly in the comment so the next run can re-test them. */
 export function findingsMarker(findings, sha) {
-  const keep = (findings || []).map((f) => ({ id: f.id, sc: f.sc, level: f.level, app: f.app, route: f.route, url: f.url, locale: f.locale, state: f.state, replay: f.replay, title: f.title, actual: f.actual, element: { selector: f.element?.selector, name: f.element?.name } }));
+  const keep = (findings || []).map((f) => ({ id: f.id, sc: f.sc, level: f.level, app: f.app, route: f.route, url: f.url, locale: f.locale, state: f.state, replay: f.replay, title: f.title, why: f.why, expected: f.expected, actual: f.actual, severity: f.severity, steps: f.steps, suggestedFix: f.suggestedFix, measurement: carriedMeasurement(f.measurement), element: { selector: f.element?.selector, name: f.element?.name } }));
   return `<!-- a11y-findings: ${Buffer.from(JSON.stringify({ sha, findings: keep })).toString("base64")} -->`;
 }
 

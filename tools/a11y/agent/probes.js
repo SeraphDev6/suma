@@ -130,6 +130,11 @@
     const el = $(target);
     if (!el) return { error: "element not found" };
     el.scrollIntoView({ block: "center", inline: "center" });
+    // Measure the target at rest. A focused (or hovered) control is often raised above its
+    // neighbours (Bootstrap gives a focused .btn in a .btn-group z-index 1), so its invisible
+    // hit area wins the overlap only while it has focus. A pointer user meets it unfocused.
+    const focused = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+    if (focused) focused.blur();
     const r = el.getBoundingClientRect();
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
@@ -145,6 +150,14 @@
     while (down < max && hits(cx, cy + down + 1)) down++;
     const hitW = hits(cx, cy) ? left + right + 1 : 0;
     const hitH = hits(cx, cy) ? up + down + 1 : 0;
+    // Hover cannot be cleared from a script; say so when the pointer rests on this target or a
+    // control next to it, because that can change which hit area is on top.
+    const hovered = [...document.querySelectorAll(":hover")].at(-1);
+    const hoverNearby = !!hovered && hovered !== document.body && (() => {
+      const hr = hovered.getBoundingClientRect();
+      return hr.right > r.left - 30 && hr.left < r.right + 30 && hr.bottom > r.top - 30 && hr.top < r.bottom + 30;
+    })();
+    if (focused) focused.focus({ preventScroll: true });
     const width = Math.max(round(r.width, 1), hitW);
     const height = Math.max(round(r.height, 1), hitH);
 
@@ -168,6 +181,8 @@
       boxPx: { width: round(r.width, 1), height: round(r.height, 1) },
       hitAreaPx: { width: hitW, height: hitH },
       width, height,
+      measuredAtRest: true,
+      ...(hoverNearby ? { warning: `the pointer is over ${describe(hovered)}, which can raise one hit area over another; move the pointer away (hover something far off) and measure again` } : {}),
       inlineInText: getComputedStyle(el).display === "inline" && !!el.closest("p,li,td,dd"),
       spacingExceptionChecked: true,
       spacingOk: conflicts.length === 0,
